@@ -1,0 +1,22 @@
+cat > .gitignore << 'EOF'
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (dados sensíveis — nunca commitar)
+.env
+.env.local
+.env.*.local
+
+# Build do front-end (Vite)
+client/dist/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional / editor
+.DS_Store
+Thumbs.db
+.vscode/
+EOF
