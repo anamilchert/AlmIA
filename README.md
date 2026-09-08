@@ -76,6 +76,6 @@ O sistema é dividido em componentes independentes:
 ## 🛠️ Tecnologias
 
 - Backend: Node.js  
-- Banco de dados: Supabase (PostgreSQL)  
-- Interface web: React (JavaScript)  
+- Banco de dados: MongoDB 
+- Interface web: React  
 - IA: OpenAI  
