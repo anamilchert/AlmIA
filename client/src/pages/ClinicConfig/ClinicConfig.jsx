@@ -291,42 +291,57 @@ export default function ClinicConfig() {
             </section>
           )}
 
-          {secaoAtiva === 'exames' && (
-            <section className="cfg-card">
-              <header className="cfg-card-header">
-                <div className="cfg-card-title">Preparo de exames</div>
-                <div className="cfg-card-sub">
-                  Instruções enviadas automaticamente pelo bot quando solicitado
-                </div>
-              </header>
-              <div className="cfg-card-body form-grid">
-                {config.preparoExames.map((ex, i) => (
-                  <div className="field form-full exame-item" key={i}>
-                    <div className="exame-item-head">
+         {secaoAtiva === 'exames' && (
+        <section className="cfg-card">
+          <header className="cfg-card-header">
+            <div className="cfg-card-title">Preparo de exames</div>
+            <div className="cfg-card-sub">
+              Instruções enviadas automaticamente pelo bot quando solicitado
+            </div>
+          </header>
+          <div className="cfg-card-body">
+            <div className="exames-list">
+              {config.preparoExames.map((ex, i) => (
+                <div className="exame-item" key={i}>
+                  <div className="exame-item-head">
+                    <div className="field">
+                      <label>Nome do exame</label>
                       <input
                         type="text"
                         className="exame-nome-input"
+                        placeholder="Ex: Hemograma completo"
                         value={ex.nome}
                         onChange={(e) => atualizarExame(i, 'nome', e.target.value)}
                       />
-                      <button className="btn-remover-exame" onClick={() => removerExame(i)}>
-                        <Trash2 size={14} strokeWidth={1.8} />
-                        </button>
                     </div>
+                    <button
+                      type="button"
+                      className="btn-remover-exame"
+                      onClick={() => removerExame(i)}
+                      aria-label="Remover exame"
+                    >
+                      <Trash2 size={14} strokeWidth={1.8} />
+                    </button>
+                  </div>
+                  <div className="field">
+                    <label>Recomendações</label>
                     <textarea
                       rows={2}
+                      placeholder="Ex: Jejum de 8 horas."
                       value={ex.instrucoes}
                       onChange={(e) => atualizarExame(i, 'instrucoes', e.target.value)}
                     />
                   </div>
-                ))}
-                <button className="btn" onClick={adicionarExame}>
-                <Plus size={15} strokeWidth={2} />
-                Adicionar exame
-                </button>
-              </div>
-            </section>
-          )}
+                </div>
+              ))}
+            </div>
+            <button className="btn" onClick={adicionarExame} style={{ marginTop: 12 }}>
+              <Plus size={15} strokeWidth={2} />
+              Adicionar exame
+            </button>
+          </div>
+        </section>
+      )}
 
           {secaoAtiva === 'bot' && (
             <section className="cfg-card">
