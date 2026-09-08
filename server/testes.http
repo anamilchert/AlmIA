@@ -1,0 +1,62 @@
+### Variável de ambiente local
+@baseUrl = http://localhost:5000
+
+### 1. Health check — confirma que o servidor está de pé
+GET {{baseUrl}}/api/health
+
+###
+
+### 2. GET config da clínica
+### Na primeira chamada, cria automaticamente uma config vazia (modo teste, owner fixo)
+GET {{baseUrl}}/api/clinic-config
+
+###
+
+### 3. PUT — atualiza dados gerais
+PUT {{baseUrl}}/api/clinic-config
+Content-Type: application/json
+
+{
+  "dadosGerais": {
+    "nomeClinica": "Clínica São Lucas",
+    "cnpj": "12.345.678/0001-90",
+    "especialidades": "Ortopedia, Dermatologia, Clínica Geral",
+    "telefonePrincipal": "(11) 3456-7890",
+    "whatsappAtendimento": "+55 11 99876-5432",
+    "endereco": "Av. Paulista, 1500 — Sala 204 — Bela Vista, São Paulo/SP",
+    "siteAgendamento": "https://clinicasaolucas.com.br/agendamento"
+  }
+}
+
+###
+
+### 4. PUT — atualiza convênios
+PUT {{baseUrl}}/api/clinic-config
+Content-Type: application/json
+
+{
+  "convenios": ["Unimed", "Bradesco Saúde", "Amil"]
+}
+
+###
+
+### 5. PUT — atualiza horários
+PUT {{baseUrl}}/api/clinic-config
+Content-Type: application/json
+
+{
+  "horarios": [
+    { "dia": "Seg", "ativo": true, "abertura": "08:00", "fechamento": "17:00" },
+    { "dia": "Ter", "ativo": true, "abertura": "08:00", "fechamento": "17:00" },
+    { "dia": "Qua", "ativo": true, "abertura": "08:00", "fechamento": "17:00" },
+    { "dia": "Qui", "ativo": true, "abertura": "08:00", "fechamento": "17:00" },
+    { "dia": "Sex", "ativo": true, "abertura": "08:00", "fechamento": "17:00" },
+    { "dia": "Sáb", "ativo": false, "abertura": "", "fechamento": "" },
+    { "dia": "Dom", "ativo": false, "abertura": "", "fechamento": "" }
+  ]
+}
+
+###
+
+### 6. GET novamente — confirma que tudo foi salvo
+GET {{baseUrl}}/api/clinic-config

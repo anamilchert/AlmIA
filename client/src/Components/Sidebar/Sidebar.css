@@ -1,0 +1,93 @@
+.sb {
+  width: var(--sidebar-w);
+  background: #fff;
+  border-right: 1px solid var(--gray-100);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100vh;
+}
+
+.sb-logo {
+  padding: 22px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sb-logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--blue-400), var(--blue-700));
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+.sb-logo-name { font-weight: 700; font-size: 15px; color: var(--gray-900); letter-spacing: -0.3px; }
+.sb-logo-tag { font-size: 11px; color: var(--blue-400); font-weight: 500; }
+
+.sb-nav {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.sb-section {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gray-300);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 16px 12px 6px;
+}
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--gray-400);
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font);
+  transition: background 0.15s, color 0.15s;
+}
+.sb-item:hover { background: var(--gray-50); color: var(--gray-600); }
+.sb-item.active {
+  background: var(--blue-50);
+  color: var(--blue-600);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--blue-500);
+}
+.sb-badge {
+  margin-left: auto;
+  background: var(--blue-500);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-family: var(--mono);
+}
+
+.sb-footer { padding: 14px; border-top: 1px solid var(--gray-100); }
+.sb-user { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: var(--radius-sm); cursor: pointer; }
+.sb-user:hover { background: var(--gray-50); }
+.sb-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--green-100), var(--green-500));
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.sb-user-name { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+.sb-user-role { font-size: 11px; color: var(--gray-400); }
