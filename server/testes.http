@@ -60,3 +60,47 @@ Content-Type: application/json
 
 ### 6. GET novamente — confirma que tudo foi salvo
 GET {{baseUrl}}/api/clinic-config
+
+### Criar paciente de teste
+POST http://localhost:5000/api/pacientes
+Content-Type: application/json
+
+{
+  "nome": "João Carlos Ferreira",
+  "dataNascimento": "1985-03-15",
+  "telefone": "+55 11 98765-4321",
+  "email": "joao.ferreira@email.com",
+  "cidade": "São Paulo - SP",
+  "cpf": "***.456.789-**",
+  "planoSaude": {
+    "operadora": "Bradesco Saúde",
+    "carteirinha": "00123456789",
+    "validade": "12/2026"
+  },
+  "observacoesInternas": "Paciente prefere atendimento às terças e quintas à tarde.",
+  "consultas": [
+    {
+      "especialidade": "Ortopedia",
+      "medico": "Dr. Ricardo Almeida",
+      "data": "2026-05-26T10:00:00",
+      "status": "a_remarcar",
+      "convenio": "Bradesco Saúde"
+    }
+  ],
+  "conversasResumo": [
+    {
+      "data": "2026-05-25T14:20:00",
+      "assunto": "Remarcação de consulta",
+      "detalhe": "Paciente relatou erro no site ao tentar remarcar.",
+      "atendimento": "humano",
+      "mensagens": 8,
+      "duracaoMinutos": null
+    }
+  ]
+}
+
+### Listar pacientes
+GET http://localhost:5000/api/pacientes
+
+### Obter paciente por ID (troque o :id depois do primeiro teste)
+GET http://localhost:5000/api/pacientes/SEU_ID_AQUI
