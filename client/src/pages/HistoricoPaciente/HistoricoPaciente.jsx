@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Calendar, Phone, Mail, MapPin, IdCard, Building2,
-  FileCheck, CalendarCheck, UserPlus, UserCheck, Stethoscope, MessagesSquare
+  FileCheck, CalendarCheck, UserPlus, UserCheck, Stethoscope, MessagesSquare,
+  CalendarX, XCircle
 } from 'lucide-react';
 import { obterPaciente } from '../../api/pacienteApi';
 import './HistoricoPaciente.css';
@@ -11,6 +12,9 @@ const ICONE_EVENTO = {
   cadastro: <UserPlus size={14} />,
   consulta_agendada: <Calendar size={14} />,
   consulta_realizada: <Stethoscope size={14} />,
+  consulta_a_remarcar: <CalendarX size={14} />,
+  consulta_nao_compareceu: <XCircle size={14} />,
+  consulta_cancelada: <XCircle size={14} />,
   conversa_ia: <MessagesSquare size={14} />,
   conversa_humano: <UserCheck size={14} />
 };
@@ -19,6 +23,9 @@ const COR_EVENTO = {
   cadastro: 'blue',
   consulta_agendada: 'blue',
   consulta_realizada: 'green',
+  consulta_a_remarcar: 'amber',
+  consulta_nao_compareceu: 'gray',
+  consulta_cancelada: 'red',
   conversa_ia: 'green',
   conversa_humano: 'amber'
 };
