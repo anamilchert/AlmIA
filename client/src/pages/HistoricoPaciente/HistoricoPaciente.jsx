@@ -23,6 +23,22 @@ const COR_EVENTO = {
   conversa_humano: 'amber'
 };
 
+function calcularIdade(dataNascimento) {
+  if (!dataNascimento) return null;
+
+  const hoje = new Date();
+  const nascimento = new Date(dataNascimento);
+
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const aindaNaoFezAniversario =
+    hoje.getMonth() < nascimento.getMonth() ||
+    (hoje.getMonth() === nascimento.getMonth() && hoje.getDate() < nascimento.getDate());
+
+  if (aindaNaoFezAniversario) idade--;
+
+  return idade;
+}
+
 export default function HistoricoPaciente() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -43,9 +59,7 @@ export default function HistoricoPaciente() {
 
   const { paciente, timeline, stats } = dados;
   const iniciais = paciente.nome.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase();
-  const idade = paciente.dataNascimento
-    ? Math.floor((Date.now() - new Date(paciente.dataNascimento)) / 3.15576e10)
-    : null;
+  const idade = calcularIdade(paciente.dataNascimento);
 
   return (
     <div className="historico-page">
@@ -78,7 +92,7 @@ export default function HistoricoPaciente() {
             <div className="ps-title">Dados pessoais</div>
             {paciente.dataNascimento && (
               <div className="ps-row"><Calendar size={14} /><span>Nascimento</span>
-                <strong>{new Date(paciente.dataNascimento).toLocaleDateString('pt-BR')}{idade ? ` (${idade} anos)` : ''}</strong>
+                <strong>{new Date(paciente.dataNascimento).toLocaleDateString('pt-BR')}{idade !== null ? ` (${idade} anos)` : ''}</strong>
               </div>
             )}
             {paciente.telefone && (
