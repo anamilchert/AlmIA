@@ -285,6 +285,8 @@
 .tl-blue{ background:var(--blue-50); color:var(--blue-500); }
 .tl-green{ background:var(--green-50); color:var(--green-500); }
 .tl-amber{ background:var(--amber-bg); color:var(--amber); }
+.tl-gray{ background:var(--gray-100); color:var(--gray-600); }
+.tl-red{ background:var(--red-50); color:var(--red-400); }
 
 .tl-line{
   width:1px;
