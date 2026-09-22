@@ -1,3 +1,11 @@
+const STATUS_CONSULTA = {
+  agendada: { tipo: 'consulta_agendada', titulo: 'agendada' },
+  realizada: { tipo: 'consulta_realizada', titulo: 'realizada' },
+  a_remarcar: { tipo: 'consulta_a_remarcar', titulo: 'a remarcar' },
+  nao_compareceu: { tipo: 'consulta_nao_compareceu', titulo: 'não compareceu' },
+  cancelada: { tipo: 'consulta_cancelada', titulo: 'cancelada' }
+};
+
 function buildTimelinePaciente(paciente) {
   const eventos = [];
 
@@ -9,9 +17,11 @@ function buildTimelinePaciente(paciente) {
   });
 
   paciente.consultas.forEach((c) => {
+    const info = STATUS_CONSULTA[c.status] || STATUS_CONSULTA.agendada;
+
     eventos.push({
-      tipo: c.status === 'realizada' ? 'consulta_realizada' : 'consulta_agendada',
-      titulo: `Consulta ${c.status === 'realizada' ? 'realizada' : 'agendada'} — ${c.especialidade}`,
+      tipo: info.tipo,
+      titulo: `Consulta ${info.titulo} — ${c.especialidade}`,
       data: c.data,
       detalhe: [c.medico && `Com ${c.medico}.`, c.observacoes].filter(Boolean).join(' '),
       tags: [c.especialidade, c.status].filter(Boolean)
