@@ -3,6 +3,8 @@ import Layout from './components/Layout/Layout';
 import ClinicConfig from './pages/ClinicConfig/ClinicConfig';
 import ListaPacientes from './pages/Pacientes/ListaPacientes';
 import HistoricoPaciente from './pages/HistoricoPaciente/HistoricoPaciente';
+import ListaConversas from './pages/Conversas/ListaConversas';
+import ChatConversa from './pages/Conversas/ChatConversa';
 import './styles/theme.css';
 
 function App() {
@@ -30,6 +32,22 @@ function App() {
           element={
             <Layout ativo="pacientes">
               <HistoricoPaciente />
+            </Layout>
+          }
+        />
+        <Route
+          path="/conversas"
+          element={
+            <Layout ativo="conversas">
+              <ListaConversas />
+            </Layout>
+          }
+        />
+        <Route
+          path="/conversas/:id"
+          element={
+            <Layout ativo="conversas">
+              <ChatConversa />
             </Layout>
           }
         />
