@@ -1,6 +1,13 @@
 const OpenAI = require('openai');
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let client;
+
+function getClient() {
+  if (!client) {
+    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return client;
+}
 
 const SYSTEM_PROMPT = `Você é o assistente virtual da Clínica São Lucas. Seja cordial, objetivo e responda dúvidas sobre horários, convênios, preparo de exames e agendamentos. Se não souber algo específico, oriente o paciente a aguardar um atendente humano.`;
 
@@ -10,7 +17,7 @@ async function gerarResposta(mensagens) {
     content: m.texto
   }));
 
-  const completion = await client.chat.completions.create({
+  const completion = await getClient().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...historico],
     max_tokens: 300
