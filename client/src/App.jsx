@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout/Layout';
+import Layout from './Components/Layout/Layout';
 import ClinicConfig from './pages/ClinicConfig/ClinicConfig';
 import ListaPacientes from './pages/Pacientes/ListaPacientes';
 import HistoricoPaciente from './pages/HistoricoPaciente/HistoricoPaciente';
