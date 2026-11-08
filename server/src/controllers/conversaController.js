@@ -1,10 +1,12 @@
 const Conversa = require('../models/Conversa');
 const Paciente = require('../models/Paciente');
 const { gerarResposta } = require('../services/openaiService');
+const { enviarMensagemWhatsapp } = require('../services/whatsappService');
 const detectaIntencaoAgendamento = require('../utils/detectaIntencaoAgendamento');
 const { buscarPacientePorTelefone, buscarPacientePorNome } = require('./pacienteController');
 
-const OWNER_ID_TESTE = 'owner-teste-001';
+const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
+const STATUS_VALIDOS = ['ia', 'humano', 'concluida'];
 
 async function listarConversas(req, res) {
   try {
@@ -140,7 +142,9 @@ async function enviarMensagem(req, res) {
     }
 
     // --- FLUXO NORMAL: responde direto, sem interromper ---
-    const precisaIdentificar = detectaIntencaoAgendamento(texto) && !conversa.pacienteId;
+    // com humano atendendo, o bot não puxa o fluxo de identificação
+    const precisaIdentificar =
+      conversa.status === 'ia' && detectaIntencaoAgendamento(texto) && !conversa.pacienteId;
 
     if (precisaIdentificar) {
       conversa.estado = 'coletando_nome';
@@ -172,4 +176,68 @@ async function resolverPedidoPendente(conversa) {
   conversa.mensagemPendente = null;
 }
 
-module.exports = { listarConversas, obterConversa, criarConversa, enviarMensagem };
+async function responderComoAtendente(req, res) {
+  try {
+    const { texto } = req.body;
+    if (!texto || !texto.trim()) {
+      return res.status(400).json({ erro: 'Mensagem vazia.' });
+    }
+
+    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
+    if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
+
+    const textoLimpo = texto.trim();
+    conversa.mensagens.push({ remetente: 'humano', texto: textoLimpo });
+
+    if (conversa.status === 'ia') {
+      conversa.status = 'humano';
+      conversa.handoffEm = conversa.handoffEm || new Date();
+    }
+
+    conversa.ultimaMensagemEm = new Date();
+    await conversa.save();
+
+    // entrega ao paciente no WhatsApp; conversas de teste (sem telefone real) só ficam salvas
+    if (conversa.telefone) {
+      try {
+        await enviarMensagemWhatsapp(conversa.telefone, textoLimpo);
+      } catch (e) {
+        console.error('Falha ao enviar ao WhatsApp:', e.message);
+      }
+    }
+
+    res.json(conversa);
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao responder.', detalhes: err.message });
+  }
+}
+
+async function atualizarStatus(req, res) {
+  try {
+    const { status } = req.body;
+    if (!STATUS_VALIDOS.includes(status)) {
+      return res.status(400).json({ erro: 'Status inválido.' });
+    }
+
+    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
+    if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
+
+    conversa.status = status;
+    if (status === 'humano' && !conversa.handoffEm) conversa.handoffEm = new Date();
+    if (status === 'concluida') conversa.encerradaEm = new Date();
+
+    await conversa.save();
+    res.json(conversa);
+  } catch (err) {
+    res.status(400).json({ erro: 'Erro ao atualizar status.', detalhes: err.message });
+  }
+}
+
+module.exports = {
+  listarConversas,
+  obterConversa,
+  criarConversa,
+  enviarMensagem,
+  responderComoAtendente,
+  atualizarStatus
+};
