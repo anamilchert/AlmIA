@@ -5,6 +5,7 @@ import ListaPacientes from './pages/Pacientes/ListaPacientes';
 import HistoricoPaciente from './pages/HistoricoPaciente/HistoricoPaciente';
 import ListaConversas from './pages/Conversas/ListaConversas';
 import ChatConversa from './pages/Conversas/ChatConversa';
+import Dashboard from './pages/Dashboard/Dashboard';
 import './styles/theme.css';
 
 function App() {
@@ -59,6 +60,14 @@ function App() {
             </Layout>
           }
         />
+      <Route
+        path="/dashboard"
+        element={
+          <Layout ativo="dashboard">
+            <Dashboard />
+          </Layout>
+        }
+      />
       </Routes>
     </BrowserRouter>
   );
