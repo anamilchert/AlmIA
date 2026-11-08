@@ -28,6 +28,9 @@ const conversaSchema = new mongoose.Schema({
     default: 'ia'
   },
 
+  handoffEm: { type: Date, default: null },
+  encerradaEm: { type: Date, default: null },
+
   mensagens: [mensagemSchema],
 
   ultimaMensagemEm: { type: Date, default: Date.now }
