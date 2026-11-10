@@ -1,8 +1,9 @@
 const Conversa = require('../models/Conversa');
 const { gerarResposta } = require('../services/openaiService');
 const { enviarMensagemWhatsapp } = require('../services/whatsappService');
+const { buscarPacientePorTelefone } = require('./pacienteController');
 
-const OWNER_ID_TESTE = 'owner-teste-001';
+const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 
 function verificarWebhook(req, res) {
   const mode = req.query['hub.mode'];
@@ -21,34 +22,58 @@ async function receberMensagem(req, res) {
     const change = entry?.changes?.[0];
     const mensagemRecebida = change?.value?.messages?.[0];
 
+    // eventos que não são mensagem (status de entrega, leitura etc.)
     if (!mensagemRecebida) {
       return res.sendStatus(200);
     }
 
     const numeroPaciente = mensagemRecebida.from;
-    const textoRecebido = mensagemRecebida.text?.body || '';
+    const textoRecebido = (mensagemRecebida.text?.body || '').trim();
     const nomeContato = change.value.contacts?.[0]?.profile?.name || numeroPaciente;
 
+    // áudio, imagem, figurinha etc.: o schema exige texto, então não dá para salvar
+    if (!textoRecebido) {
+      try {
+        await enviarMensagemWhatsapp(
+          numeroPaciente,
+          'No momento só consigo entender mensagens de texto. Pode escrever sua dúvida?'
+        );
+      } catch (e) {
+        console.error('Falha ao avisar sobre mensagem não suportada:', e.message);
+      }
+      return res.sendStatus(200);
+    }
+
+    // só reaproveita conversa aberta; se a última foi encerrada, abre uma nova
     let conversa = await Conversa.findOne({
       ownerId: OWNER_ID_TESTE,
-      telefone: numeroPaciente
+      telefone: numeroPaciente,
+      status: { $ne: 'concluida' }
     });
 
     if (!conversa) {
+      const pacienteExistente = await buscarPacientePorTelefone(numeroPaciente);
       conversa = await Conversa.create({
         ownerId: OWNER_ID_TESTE,
-        nome: nomeContato,
+        nome: pacienteExistente ? pacienteExistente.nome : nomeContato,
         telefone: numeroPaciente,
+        pacienteId: pacienteExistente ? pacienteExistente._id : null,
         mensagens: []
       });
     }
 
     conversa.mensagens.push({ remetente: 'paciente', texto: textoRecebido });
 
+    // com humano atendendo, o bot não responde
     if (conversa.status === 'ia') {
-      const respostaIA = await gerarResposta(conversa.mensagens);
-      conversa.mensagens.push({ remetente: 'bot', texto: respostaIA });
-      await enviarMensagemWhatsapp(numeroPaciente, respostaIA);
+      try {
+        const respostaIA = await gerarResposta(conversa.mensagens);
+        conversa.mensagens.push({ remetente: 'bot', texto: respostaIA });
+        await enviarMensagemWhatsapp(numeroPaciente, respostaIA);
+      } catch (e) {
+        // a mensagem do paciente continua salva mesmo se a IA ou o envio falharem
+        console.error('Falha ao responder pelo bot:', e.message);
+      }
     }
 
     conversa.ultimaMensagemEm = new Date();

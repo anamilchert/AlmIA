@@ -12,17 +12,14 @@ import {
 import './Sidebar.css';
 
 const NAV_PRINCIPAL = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { id: 'conversas', label: 'Conversas', icon: MessageSquare, badge: 3, path: '/conversas' },
   { id: 'agendamentos', label: 'Agendamentos', icon: Calendar, path: '/agendamentos' },
   { id: 'pacientes', label: 'Pacientes', icon: Users, path: '/pacientes' },
-  { id: 'relatorios', label: 'Relatórios', icon: BarChart3, path: '/relatorios' },
 ];
 
 const NAV_CONFIG = [
   { id: 'clinica', label: 'Clínica', icon: Building2, path: '/clinica' },
-  { id: 'agente-ia', label: 'Agente IA', icon: Bot, path: '/agente-ia' },
-  { id: 'configuracoes', label: 'Configurações', icon: Settings, path: '/configuracoes' },
 ];
 
 export default function Sidebar({ ativo = 'clinica' }) {
