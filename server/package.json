@@ -6,7 +6,27 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/config/db.js"
+    ],
+    "coverageReporters": [
+      "text",
+      "lcov"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 75,
+        "lines": 75,
+        "functions": 75,
+        "branches": 60
+      }
+    }
   },
   "keywords": [],
   "author": "",
@@ -23,6 +43,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "jest": "^30.5.2",
     "nodemon": "^3.1.14"
   }
 }
