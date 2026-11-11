@@ -1,0 +1,23 @@
+# dependências
+node_modules/
+
+# variáveis de ambiente (chaves da OpenAI e do WhatsApp)
+.env
+.env.*
+
+# relatórios de cobertura gerados pelo Jest/Vitest
+coverage/
+.nyc_output/
+
+# builds
+dist/
+build/
+
+# logs
+*.log
+npm-debug.log*
+
+# sistema e editor
+.DS_Store
+Thumbs.db
+.vscode/
