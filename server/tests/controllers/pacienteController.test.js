@@ -9,6 +9,9 @@ jest.mock('xlsx', () => ({
   read: jest.fn(),
   utils: { sheet_to_json: jest.fn() },
 }));
+  jest.mock('../../src/services/finalizarAgendamentos', () => ({
+    finalizarAgendamentosVencidos: jest.fn(),
+  }));
 
 const XLSX = require('xlsx');
 const Paciente = require('../../src/models/Paciente');
