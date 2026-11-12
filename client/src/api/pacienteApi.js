@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api/pacientes';
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/pacientes`;
 
 export async function listarPacientes() {
   const res = await fetch(API_URL);
