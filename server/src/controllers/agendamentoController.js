@@ -1,10 +1,16 @@
 const Agendamento = require('../models/Agendamento');
+  const { finalizarAgendamentosVencidos } = require('../services/finalizarAgendamentos');
 
 const OWNER_ID_TESTE = 'owner-teste-001';
 const STATUS_VALIDOS = ['pendente', 'confirmado', 'cancelado', 'concluido', 'nao_compareceu'];
 
 async function listarAgendamentos(req, res) {
   try {
+         try {
+        await finalizarAgendamentosVencidos(OWNER_ID_TESTE);
+      } catch (e) {
+        console.error('Falha ao finalizar agendamentos vencidos:', e.message);
+      }
     const { status, inicio, fim } = req.query;
     const filtro = { ownerId: OWNER_ID_TESTE };
     if (status) filtro.status = status;
