@@ -1,6 +1,7 @@
 const Paciente = require('../models/Paciente');
 const buildTimelinePaciente = require('../utils/buildTimelinePaciente');
 const XLSX = require('xlsx');
+const Conversa = require('../models/Conversa');
 
 const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 
@@ -58,9 +59,10 @@ async function buscarPacientePorTelefone(telefone) {
 }
 
 async function buscarPacientePorNome(nome) {
+  const nomeSeguro = nome.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return Paciente.findOne({
     ownerId: OWNER_ID_TESTE,
-    nome: { $regex: `^${nome.trim()}$`, $options: 'i' }
+    nome: { $regex: `^${nomeSeguro}$`, $options: 'i' }
   });
 }
 
@@ -97,11 +99,31 @@ async function importarPacientes(req, res) {
   }
 }
 
+async function removerPaciente(req, res) {
+  try {
+    const removido = await Paciente.findOneAndDelete({
+      _id: req.params.id,
+      ownerId: OWNER_ID_TESTE
+    });
+    if (!removido) {
+      return res.status(404).json({ erro: 'Paciente não encontrado.' });
+    }
+    await Conversa.updateMany(
+      { ownerId: OWNER_ID_TESTE, pacienteId: removido._id },
+      { $set: { pacienteId: null } }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao excluir paciente.' });
+  }
+}
+
 module.exports = {
   listarPacientes,
   obterPaciente,
   criarPaciente,
   buscarPacientePorTelefone,
   buscarPacientePorNome,
-  importarPacientes
+  importarPacientes,
+  removerPaciente,
 };
