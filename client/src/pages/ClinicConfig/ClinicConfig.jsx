@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Building2, Clock, IdCard, FileText, MessageCircle, SlidersHorizontal,
-  Save, Plus, X, Trash2, CheckCircle2,
+  Save, Plus, X, Trash2, CheckCircle2, Stethoscope,
 } from 'lucide-react';
 import { getClinicConfig, saveClinicConfig } from '../../api/clinicConfigApi';
 import './ClinicConfig.css';
@@ -13,6 +13,7 @@ const SECOES = [
   { id: 'exames', label: 'Preparo de exames', icon: FileText },
   { id: 'bot', label: 'Mensagens do bot', icon: MessageCircle },
   { id: 'avancado', label: 'Avançado', icon: SlidersHorizontal },
+  { id: 'equipe', label: 'Especialidades e médicos', icon: Stethoscope },
 ];
 
 export default function ClinicConfig() {
@@ -23,6 +24,8 @@ export default function ClinicConfig() {
   const [salvando, setSalvando] = useState(false);
   const [statusSalvo, setStatusSalvo] = useState(false);
   const [erro, setErro] = useState(null);
+  const [novaEspecialidade, setNovaEspecialidade] = useState('');
+  const [novoMedico, setNovoMedico] = useState({ nome: '', especialidade: '' });
 
   useEffect(() => {
     getClinicConfig()
@@ -60,6 +63,45 @@ export default function ClinicConfig() {
     setConfig((prev) => ({
       ...prev,
       convenios: prev.convenios.filter((_, i) => i !== index),
+    }));
+  }
+
+    function adicionarEspecialidade() {
+    const valor = novaEspecialidade.trim();
+    if (!valor) return;
+    setConfig((prev) => {
+      const lista = prev.listaEspecialidades ?? [];
+      if (lista.includes(valor)) return prev;
+      return { ...prev, listaEspecialidades: [...lista, valor] };
+    });
+    setNovaEspecialidade('');
+  }
+
+  function removerEspecialidade(index) {
+    setConfig((prev) => ({
+      ...prev,
+      listaEspecialidades: (prev.listaEspecialidades ?? []).filter((_, i) => i !== index),
+    }));
+  }
+
+  function adicionarMedico() {
+    const nome = novoMedico.nome.trim();
+    if (!nome) return;
+    setConfig((prev) => {
+      const lista = prev.medicos ?? [];
+      const existe = lista.some(
+        (m) => m.nome === nome && m.especialidade === novoMedico.especialidade
+      );
+      if (existe) return prev;
+      return { ...prev, medicos: [...lista, { nome, especialidade: novoMedico.especialidade }] };
+    });
+    setNovoMedico({ nome: '', especialidade: novoMedico.especialidade });
+  }
+
+  function removerMedico(index) {
+    setConfig((prev) => ({
+      ...prev,
+      medicos: (prev.medicos ?? []).filter((_, i) => i !== index),
     }));
   }
 
@@ -176,14 +218,6 @@ export default function ClinicConfig() {
                   />
                 </div>
                 <div className="field">
-                  <label>Especialidades</label>
-                  <input
-                    type="text"
-                    value={config.dadosGerais.especialidades}
-                    onChange={(e) => atualizarDadosGerais('especialidades', e.target.value)}
-                  />
-                </div>
-                <div className="field">
                   <label>Telefone principal</label>
                   <input
                     type="text"
@@ -255,6 +289,86 @@ export default function ClinicConfig() {
                 </div>
               </div>
             </section>
+          )}
+
+                    {secaoAtiva === 'equipe' && (
+            <>
+              <section className="cfg-card">
+                <header className="cfg-card-header">
+                  <div className="cfg-card-title">Especialidades</div>
+                  <div className="cfg-card-sub">Aparecem como opção na tela de agendamentos</div>
+                </header>
+                <div className="cfg-card-body">
+                  <div className="conv-wrap">
+                    {(config.listaEspecialidades ?? []).map((e, i) => (
+                      <div className="conv-tag" key={e}>
+                        {e}
+                        <button onClick={() => removerEspecialidade(i)} aria-label={`Remover ${e}`}>
+                          <X size={13} strokeWidth={2} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="add-conv-row">
+                    <input
+                      type="text"
+                      value={novaEspecialidade}
+                      placeholder="Adicionar especialidade..."
+                      onChange={(e) => setNovaEspecialidade(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && adicionarEspecialidade()}
+                    />
+                    <button className="btn btn-primary" onClick={adicionarEspecialidade}>
+                      <Plus size={15} strokeWidth={2} />
+                      Adicionar
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <section className="cfg-card cfg-card-espaco">
+                <header className="cfg-card-header">
+                  <div className="cfg-card-title">Médicos</div>
+                  <div className="cfg-card-sub">
+                    Cada médico fica ligado a uma especialidade
+                  </div>
+                </header>
+                <div className="cfg-card-body">
+                  <div className="conv-wrap">
+                    {(config.medicos ?? []).map((m, i) => (
+                      <div className="conv-tag" key={`${m.nome}-${m.especialidade}`}>
+                        {m.nome}
+                        {m.especialidade && <small>{m.especialidade}</small>}
+                        <button onClick={() => removerMedico(i)} aria-label={`Remover ${m.nome}`}>
+                          <X size={13} strokeWidth={2} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="add-conv-row">
+                    <input
+                      type="text"
+                      value={novoMedico.nome}
+                      placeholder="Nome do médico..."
+                      onChange={(e) => setNovoMedico((m) => ({ ...m, nome: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && adicionarMedico()}
+                    />
+                    <select
+                      value={novoMedico.especialidade}
+                      onChange={(e) => setNovoMedico((m) => ({ ...m, especialidade: e.target.value }))}
+                    >
+                      <option value="">Especialidade...</option>
+                      {(config.listaEspecialidades ?? []).map((e) => (
+                        <option key={e} value={e}>{e}</option>
+                      ))}
+                    </select>
+                    <button className="btn btn-primary" onClick={adicionarMedico}>
+                      <Plus size={15} strokeWidth={2} />
+                      Adicionar
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </>
           )}
 
           {secaoAtiva === 'convenios' && (
