@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api/conversas';
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/conversas`;
 
 export async function listarConversas() {
   const res = await fetch(API_URL);
