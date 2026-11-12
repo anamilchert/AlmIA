@@ -117,3 +117,11 @@
   border-radius:20px;
   flex-shrink:0;
 }
+
+.paciente-acoes { margin-left: 12px; }
+.paciente-lixo { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--gray-200); background: #fff; color: var(--gray-400); display: grid; place-items: center; cursor: pointer; }
+.paciente-lixo:hover { color: var(--red-400); background: var(--red-50); border-color: var(--red-50); }
+.paciente-confirma { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--gray-600); }
+.paciente-sim, .paciente-nao { padding: 5px 11px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: var(--font); border: 1px solid var(--gray-200); background: #fff; color: var(--gray-600); }
+.paciente-sim { background: var(--red-400); border-color: var(--red-400); color: #fff; }
+.paciente-erro { padding: 10px 24px; font-size: 13px; color: var(--red-400); background: var(--red-50); }
