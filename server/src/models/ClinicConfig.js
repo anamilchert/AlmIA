@@ -18,6 +18,14 @@ const preparoExameSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const medicoSchema = new mongoose.Schema(
+  {
+    nome: { type: String, required: true, trim: true },
+    especialidade: { type: String, default: '', trim: true },
+  },
+  { _id: false }
+);
+
 const clinicConfigSchema = new mongoose.Schema(
   {
     owner: {
@@ -29,7 +37,6 @@ const clinicConfigSchema = new mongoose.Schema(
     dadosGerais: {
       nomeClinica: { type: String, trim: true, default: '' },
       cnpj: { type: String, trim: true, default: '' },
-      especialidades: { type: String, trim: true, default: '' },
       telefonePrincipal: { type: String, trim: true, default: '' },
       whatsappAtendimento: { type: String, trim: true, default: '' },
       endereco: { type: String, trim: true, default: '' },
@@ -50,6 +57,10 @@ const clinicConfigSchema = new mongoose.Schema(
     },
 
     convenios: { type: [String], default: [] },
+
+    listaEspecialidades: { type: [String], default: [] },
+
+    medicos: { type: [medicoSchema], default: [] },
 
     preparoExames: { type: [preparoExameSchema], default: [] },
 
