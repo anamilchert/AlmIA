@@ -4,6 +4,11 @@ jest.mock('../../src/models/Agendamento', () => ({
   findOneAndUpdate: jest.fn(),
 }));
 
+  jest.mock('../../src/services/finalizarAgendamentos', () => ({
+    finalizarAgendamentosVencidos: jest.fn(),
+  }));
+  const { finalizarAgendamentosVencidos } = require('../../src/services/finalizarAgendamentos');
+
 const Agendamento = require('../../src/models/Agendamento');
 const {
   listarAgendamentos, criarAgendamento, atualizarStatus, removerAgendamento
@@ -48,6 +53,15 @@ describe('listarAgendamentos', () => {
     await listarAgendamentos({ query: {} }, res);
     expect(res.status).toHaveBeenCalledWith(500);
   });
+
+      it('lista mesmo se a finalização automática falhar', async () => {
+      finalizarAgendamentosVencidos.mockRejectedValue(new Error('falha'));
+      const sort = jest.fn().mockResolvedValue([]);
+      Agendamento.find.mockReturnValue({ sort });
+      const res = criarRes();
+      await listarAgendamentos({ query: {} }, res);
+      expect(res.json).toHaveBeenCalledWith([]);
+    });
 });
 
 describe('criarAgendamento', () => {
