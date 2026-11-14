@@ -6,6 +6,7 @@ import HistoricoPaciente from './pages/HistoricoPaciente/HistoricoPaciente';
 import ListaConversas from './pages/Conversas/ListaConversas';
 import ChatConversa from './pages/Conversas/ChatConversa';
 import Dashboard from './pages/Dashboard/Dashboard';
+import Agendamentos from './pages/Agendamentos/Agendamentos';
 import './styles/theme.css';
 
 function App() {
@@ -65,6 +66,14 @@ function App() {
         element={
           <Layout ativo="dashboard">
             <Dashboard />
+          </Layout>
+        }
+      />
+            <Route
+        path="/agendamentos"
+        element={
+          <Layout ativo="agendamentos">
+            <Agendamentos />
           </Layout>
         }
       />

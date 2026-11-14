@@ -24,7 +24,16 @@ exports.getConfig = async (req, res) => {
 exports.updateConfig = async (req, res) => {
   try {
     const ownerId = req.userId || OWNER_ID_TESTE;
-    const { dadosGerais, horarios, convenios, preparoExames, mensagensBot, avancado } = req.body;
+    const {
+      dadosGerais,
+      horarios,
+      convenios,
+      listaEspecialidades,
+      medicos,
+      preparoExames,
+      mensagensBot,
+      avancado,
+    } = req.body;
 
     const updated = await ClinicConfig.findOneAndUpdate(
       { owner: ownerId },
@@ -33,6 +42,8 @@ exports.updateConfig = async (req, res) => {
           ...(dadosGerais && { dadosGerais }),
           ...(horarios && { horarios }),
           ...(convenios && { convenios }),
+          ...(listaEspecialidades && { listaEspecialidades }),
+          ...(medicos && { medicos }),
           ...(preparoExames && { preparoExames }),
           ...(mensagensBot && { mensagensBot }),
           ...(avancado && { avancado }),
@@ -61,9 +72,16 @@ exports.buildContextoParaIA = async (ownerId) => {
     .map((ex) => `- ${ex.nome}: ${ex.instrucoes}`)
     .join('\n');
 
+  const especialidadesTexto = (config.listaEspecialidades || []).join(', ');
+
+  const medicosTexto = (config.medicos || [])
+    .map((m) => (m.especialidade ? `${m.nome} (${m.especialidade})` : m.nome))
+    .join(', ');
+
   return `
 Nome da clínica: ${config.dadosGerais.nomeClinica}
-Especialidades: ${config.dadosGerais.especialidades}
+Especialidades: ${especialidadesTexto}
+Médicos: ${medicosTexto}
 Endereço: ${config.dadosGerais.endereco}
 Telefone: ${config.dadosGerais.telefonePrincipal}
 Horário de funcionamento: ${horariosTexto}

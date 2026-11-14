@@ -103,7 +103,7 @@ async function enviarMensagem(req, res) {
       return res.json(conversa);
     }
 
-    // --- ETAPA: coletando nascimento ---
+       // --- ETAPA: coletando nascimento ---
     if (conversa.estado === 'coletando_nascimento') {
       const [dia, mes, ano] = texto.trim().split('/');
       const dataNascimento = ano ? new Date(`${ano}-${mes}-${dia}`) : null;
@@ -118,23 +118,40 @@ async function enviarMensagem(req, res) {
         return res.json(conversa);
       }
 
-      const novoPaciente = await Paciente.create({
-        ownerId: OWNER_ID_TESTE,
-        nome: conversa.nome,
-        telefone: conversa.telefone,
-        dataNascimento,
-        consultas: [],
-        conversasResumo: []
-      });
+      // reaproveita o cadastro se ele já existir (evita duplicar em nova tentativa)
+      let paciente = await buscarPacientePorNome(conversa.nome);
+      if (!paciente) {
+        paciente = await Paciente.create({
+          ownerId: OWNER_ID_TESTE,
+          nome: conversa.nome,
+          telefone: conversa.telefone,
+          dataNascimento,
+          consultas: [],
+          conversasResumo: []
+        });
+      }
 
-      conversa.pacienteId = novoPaciente._id;
+      conversa.pacienteId = paciente._id;
       conversa.estado = 'livre';
       conversa.mensagens.push({
         remetente: 'bot',
         texto: `Cadastro concluído, ${conversa.nome.split(' ')[0]}! Só um instante...`
       });
 
-      await resolverPedidoPendente(conversa);
+      // salva o cadastro ANTES de chamar a IA: se ela falhar, o estado não se perde
+      conversa.ultimaMensagemEm = new Date();
+      await conversa.save();
+
+      try {
+        await resolverPedidoPendente(conversa);
+      } catch (e) {
+        console.error('Falha ao retomar pedido pendente:', e.message);
+        conversa.mensagemPendente = null;
+        conversa.mensagens.push({
+          remetente: 'bot',
+          texto: 'Cadastro concluído! Como posso te ajudar?'
+        });
+      }
 
       conversa.ultimaMensagemEm = new Date();
       await conversa.save();

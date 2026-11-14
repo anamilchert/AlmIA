@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
-import { listarPacientes } from '../../api/pacienteApi';
+import { Search, Trash2 } from 'lucide-react';
+import { listarPacientes, removerPaciente } from '../../api/pacienteApi';
 import './ListaPacientes.css';
 
 export default function ListaPacientes() {
   const [pacientes, setPacientes] = useState([]);
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
+  const [excluindoId, setExcluindoId] = useState(null);
+  const [erro, setErro] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,6 +18,17 @@ export default function ListaPacientes() {
       .catch(() => setPacientes([]))
       .finally(() => setCarregando(false));
   }, []);
+
+  async function excluir(id) {
+    try {
+      await removerPaciente(id);
+      setPacientes((lista) => lista.filter((p) => p._id !== id));
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setExcluindoId(null);
+    }
+  }
 
   const filtrados = pacientes.filter((p) =>
     p.nome.toLowerCase().includes(busca.toLowerCase())
@@ -26,6 +39,8 @@ export default function ListaPacientes() {
       <header className="pacientes-topbar">
         <span className="topbar-title">Pacientes</span>
       </header>
+
+      {erro && <div className="paciente-erro">{erro}</div>}
 
       <div className="pacientes-search">
         <Search size={15} strokeWidth={1.8} />
@@ -57,6 +72,21 @@ export default function ListaPacientes() {
             {p.planoSaude?.operadora && (
               <span className="paciente-plano">{p.planoSaude.operadora}</span>
             )}
+
+            <div className="paciente-acoes" onClick={(e) => e.stopPropagation()}>
+              {excluindoId === p._id ? (
+                <div className="paciente-confirma">
+                  <span>Excluir?</span>
+                  <button className="paciente-sim" onClick={() => excluir(p._id)}>Sim</button>
+                  <button className="paciente-nao" onClick={() => setExcluindoId(null)}>Não</button>
+                </div>
+              ) : (
+                <button className="paciente-lixo" aria-label="Excluir paciente"
+                  onClick={() => setExcluindoId(p._id)}>
+                  <Trash2 size={15} />
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

@@ -308,3 +308,29 @@ describe('atualizarStatus', () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 });
+
+describe('cadastro pela conversa (anti-duplicação)', () => {
+  it('reaproveita o cadastro existente em vez de duplicar', async () => {
+    const conversa = fabricarConversa({ estado: 'coletando_nascimento' });
+    Conversa.findOne.mockResolvedValue(conversa);
+    buscarPacientePorNome.mockResolvedValue({ _id: 'existente' });
+    const res = criarRes();
+    await enviarMensagem(reqComId({ texto: '20/05/1990' }), res);
+    expect(Paciente.create).not.toHaveBeenCalled();
+    expect(conversa.pacienteId).toBe('existente');
+  });
+
+  it('mantém o cadastro mesmo se a IA falhar', async () => {
+    const conversa = fabricarConversa({
+      estado: 'coletando_nascimento', mensagemPendente: 'Quero agendar'
+    });
+    Conversa.findOne.mockResolvedValue(conversa);
+    Paciente.create.mockResolvedValue({ _id: 'novo' });
+    gerarResposta.mockRejectedValue(new Error('falha'));
+    const res = criarRes();
+    await enviarMensagem(reqComId({ texto: '20/05/1990' }), res);
+    expect(conversa.estado).toBe('livre');
+    expect(conversa.pacienteId).toBe('novo');
+    expect(res.json).toHaveBeenCalledWith(conversa);
+  });
+});

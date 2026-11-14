@@ -10,7 +10,9 @@ const consultaSchema = new mongoose.Schema({
     default: 'agendada'
   },
   convenio: { type: String, default: '' },
-  observacoes: { type: String, default: '' }
+  observacoes: { type: String, default: '' },
+  observacoes: { type: String, default: '' },
+  agendamentoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agendamento', default: null }
 });
 
 const conversaResumoSchema = new mongoose.Schema({
