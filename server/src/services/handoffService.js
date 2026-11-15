@@ -10,19 +10,30 @@ function marcarHandoff(conversa, motivo, urgencia = 'media') {
 }
 
 async function avaliarHandoff(conversa) {
-  const r = await classificarMensagem(conversa.mensagens);
-  if (!r.precisaHumano) return false;
-  marcarHandoff(conversa, r.motivo, r.urgencia);
+  let resultado;
+  try {
+    resultado = await classificarMensagem(conversa.mensagens);
+  } catch (e) {
+    marcarHandoff(conversa, 'falha_ia', 'media');
+    return true;
+  }
+
+  if (!resultado.precisaHumano) return false;
+  marcarHandoff(conversa, resultado.motivo, resultado.urgencia);
   return true;
 }
 
 async function responderIA(conversa, { handoffEmFalha = true } = {}) {
   try {
     return await gerarResposta(conversa.mensagens, {
-      nomePaciente: conversa.pacienteId ? conversa.nome : null
+      contato: {
+        pacienteId: conversa.pacienteId,
+        nome: conversa.nome,
+        telefone: conversa.telefone
+      }
     });
   } catch (e) {
-    console.error('Falha ao gerar resposta da IA:', e.message);
+    console.error('[IA] Falha ao responder na conversa', String(conversa._id), '-', e.message);
     if (handoffEmFalha) marcarHandoff(conversa, 'falha_ia', 'media');
     return null;
   }
