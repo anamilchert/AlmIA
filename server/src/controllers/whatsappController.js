@@ -1,11 +1,11 @@
 const Conversa = require('../models/Conversa');
 const { enviarMensagemWhatsapp } = require('../services/whatsappService');
-const { gerarResposta } = require('../services/openaiService');
-// HANDOFF DESATIVADO TEMPORARIAMENTE
-// const { avaliarHandoff } = require('../services/handoffService');
+const { avaliarHandoff, responderIA } = require('../services/handoffService');
 const { buscarPacientePorTelefone } = require('./pacienteController');
 
 const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
+const HANDOFF_NA_PRIMEIRA_FALA = false;
+const SAUDACAO = 'Olá! Como posso ajudar você hoje?';
 
 function verificarWebhook(req, res) {
   const mode = req.query['hub.mode'];
@@ -61,23 +61,23 @@ async function receberMensagem(req, res) {
       });
     }
 
+    const primeiraFala = !conversa.mensagens.some((m) => m.remetente === 'bot');
     conversa.mensagens.push({ remetente: 'paciente', texto: textoRecebido });
 
     if (conversa.status === 'ia') {
-      // HANDOFF DESATIVADO TEMPORARIAMENTE
-      // const encaminhou = await avaliarHandoff(conversa);
-      // if (encaminhou) { ... }
-
       try {
-                const resposta = await gerarResposta(conversa.mensagens, {
-          contato: {
-            pacienteId: conversa.pacienteId,
-            nome: conversa.nome,
-            telefone: conversa.telefone
+        const avaliarAgora = HANDOFF_NA_PRIMEIRA_FALA || !primeiraFala;
+        const encaminhou = avaliarAgora && (await avaliarHandoff(conversa));
+
+        if (!encaminhou) {
+          let resposta = await responderIA(conversa, { handoffEmFalha: avaliarAgora });
+          if (!resposta && conversa.status === 'ia') resposta = SAUDACAO;
+
+          if (resposta) {
+            conversa.mensagens.push({ remetente: 'bot', texto: resposta });
+            await enviarMensagemWhatsapp(numeroPaciente, resposta);
           }
-        });
-        conversa.mensagens.push({ remetente: 'bot', texto: resposta });
-        await enviarMensagemWhatsapp(numeroPaciente, resposta);
+        }
       } catch (e) {
         console.error('[IA] Falha ao responder no WhatsApp:', e.message);
       }
