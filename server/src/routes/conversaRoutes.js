@@ -7,7 +7,8 @@ const {
   criarConversa,
   enviarMensagem,
   responderComoAtendente,
-  atualizarStatus
+  atualizarStatus,
+  removerConversa
 } = require('../controllers/conversaController');
 
 router.get('/', listarConversas);
@@ -17,5 +18,6 @@ router.post('/', criarConversa);
 router.post('/:id/mensagens', enviarMensagem);
 router.post('/:id/atendente', responderComoAtendente);
 router.patch('/:id', atualizarStatus);
+router.delete('/:id', removerConversa);
 
 module.exports = router;
