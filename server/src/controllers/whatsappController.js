@@ -1,6 +1,6 @@
 const Conversa = require('../models/Conversa');
 const { enviarMensagemWhatsapp } = require('../services/whatsappService');
-const { avaliarHandoff, responderIA } = require('../services/handoffService');
+const { avaliarHandoff, registrarAssunto, responderIA } = require('../services/handoffService');
 const { buscarPacientePorTelefone } = require('./pacienteController');
 
 const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
@@ -67,6 +67,7 @@ async function receberMensagem(req, res) {
     if (conversa.status === 'ia') {
       try {
         const avaliarAgora = HANDOFF_NA_PRIMEIRA_FALA || !primeiraFala;
+        if (!avaliarAgora) await registrarAssunto(conversa);
         const encaminhou = avaliarAgora && (await avaliarHandoff(conversa));
 
         if (!encaminhou) {
