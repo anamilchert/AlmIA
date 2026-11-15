@@ -1,18 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { BellRing, Volume2, VolumeX } from 'lucide-react';
 import { useHandoffs } from '../../context/HandoffsContext';
+import { nomeDoMotivo } from './motivosHandoff';
 import './HandoffsAguardando.css';
-
-const MOTIVOS = {
-  sintomas_fisicos: 'Sintomas físicos',
-  emergencia: 'Possível emergência',
-  pedido_humano: 'Pediu atendimento humano',
-  reclamacao: 'Reclamação',
-  duvida_clinica: 'Dúvida clínica',
-  falha_ia: 'IA indisponível',
-  outro: 'Precisa de atenção',
-  nao_resolvido: 'IA não está resolvendo',
-};
 
 function haQuanto(data) {
   const min = Math.max(0, Math.round((Date.now() - new Date(data)) / 60000));
@@ -47,7 +37,7 @@ export default function HandoffsAguardando() {
             <button key={h._id} className="hfa-item" onClick={() => navigate(`/conversas/${h._id}`)}>
               <span className={`hfa-urg urg-${h.urgencia}`} />
               <span className="hfa-nome">{h.nome}</span>
-              <span className="hfa-motivo">{MOTIVOS[h.motivo] || MOTIVOS.outro}</span>
+              <span className="hfa-motivo">{nomeDoMotivo(h.motivo)}</span>
               <span className="hfa-tempo">{haQuanto(h.desde)}</span>
             </button>
           ))}
