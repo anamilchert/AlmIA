@@ -9,6 +9,12 @@ function marcarHandoff(conversa, motivo, urgencia = 'media') {
   conversa.urgenciaHandoff = urgencia;
 }
 
+function aplicarAssunto(conversa, resultado) {
+  if (resultado.assunto && resultado.assunto !== 'outro') {
+    conversa.assunto = resultado.assunto;
+  }
+}
+
 async function avaliarHandoff(conversa) {
   let resultado;
   try {
@@ -18,9 +24,19 @@ async function avaliarHandoff(conversa) {
     return true;
   }
 
+  aplicarAssunto(conversa, resultado);
+
   if (!resultado.precisaHumano) return false;
   marcarHandoff(conversa, resultado.motivo, resultado.urgencia);
   return true;
+}
+
+async function registrarAssunto(conversa) {
+  try {
+    aplicarAssunto(conversa, await classificarMensagem(conversa.mensagens));
+  } catch (e) {
+    console.error('[Handoff] Falha ao classificar o assunto:', e.message);
+  }
 }
 
 async function responderIA(conversa, { handoffEmFalha = true } = {}) {
@@ -39,4 +55,4 @@ async function responderIA(conversa, { handoffEmFalha = true } = {}) {
   }
 }
 
-module.exports = { avaliarHandoff, responderIA, marcarHandoff };
+module.exports = { avaliarHandoff, registrarAssunto, responderIA, marcarHandoff };
