@@ -53,9 +53,16 @@ async function criarPaciente(req, res) {
   }
 }
 
+function chaveTelefone(telefone) {
+  return String(telefone || '').replace(/\D/g, '').slice(-8);
+}
+
 async function buscarPacientePorTelefone(telefone) {
-  if (!telefone) return null;
-  return Paciente.findOne({ ownerId: OWNER_ID_TESTE, telefone });
+  const chave = chaveTelefone(telefone);
+  if (chave.length < 8) return null;
+
+  const candidatos = await Paciente.find({ ownerId: OWNER_ID_TESTE, telefone: { $ne: '' } });
+  return candidatos.find((p) => chaveTelefone(p.telefone) === chave) || null;
 }
 
 async function buscarPacientePorNome(nome) {

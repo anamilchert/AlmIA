@@ -3,17 +3,15 @@ import {
   LayoutDashboard,
   MessageSquare,
   Calendar,
-  BarChart3,
   Users,
   Building2,
-  Bot,
-  Settings,
 } from 'lucide-react';
+import { useHandoffs } from '../../context/HandoffsContext';
 import './Sidebar.css';
 
 const NAV_PRINCIPAL = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { id: 'conversas', label: 'Conversas', icon: MessageSquare, badge: 3, path: '/conversas' },
+  { id: 'conversas', label: 'Conversas', icon: MessageSquare, path: '/conversas' },
   { id: 'agendamentos', label: 'Agendamentos', icon: Calendar, path: '/agendamentos' },
   { id: 'pacientes', label: 'Pacientes', icon: Users, path: '/pacientes' },
 ];
@@ -24,6 +22,7 @@ const NAV_CONFIG = [
 
 export default function Sidebar({ ativo = 'clinica' }) {
   const navigate = useNavigate();
+  const { total } = useHandoffs();
 
   return (
     <aside className="sb">
@@ -38,7 +37,13 @@ export default function Sidebar({ ativo = 'clinica' }) {
       <nav className="sb-nav">
         <div className="sb-section">Principal</div>
         {NAV_PRINCIPAL.map((item) => (
-          <SbItem key={item.id} item={item} ativo={ativo} onNavigate={navigate} />
+          <SbItem
+            key={item.id}
+            item={item}
+            ativo={ativo}
+            onNavigate={navigate}
+            badge={item.id === 'conversas' && total > 0 ? total : null}
+          />
         ))}
 
         <div className="sb-section">Configuração</div>
@@ -60,7 +65,7 @@ export default function Sidebar({ ativo = 'clinica' }) {
   );
 }
 
-function SbItem({ item, ativo, onNavigate }) {
+function SbItem({ item, ativo, onNavigate, badge = null }) {
   const Icon = item.icon;
   const isActive = item.id === ativo;
   return (
@@ -70,7 +75,7 @@ function SbItem({ item, ativo, onNavigate }) {
     >
       <Icon size={18} strokeWidth={1.8} />
       <span>{item.label}</span>
-      {item.badge && <span className="sb-badge">{item.badge}</span>}
+      {badge && <span className="sb-badge">{badge}</span>}
     </button>
   );
 }

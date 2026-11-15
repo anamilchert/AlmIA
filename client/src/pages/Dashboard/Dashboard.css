@@ -362,3 +362,18 @@
   .dashboard .charts-row,
   .dashboard .bottom-row { grid-template-columns: 1fr; }
 }
+
+.dashboard .dash-aviso {
+  background: var(--red-50);
+  color: var(--red-400);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.dashboard .vazio {
+  color: var(--gray-400);
+  font-size: 13px;
+  padding: 16px 0;
+}

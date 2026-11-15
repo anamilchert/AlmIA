@@ -11,6 +11,7 @@ app.use('/api/pacientes', require('./routes/pacienteRoutes'));
 app.use('/api/conversas', require('./routes/conversaRoutes'));
 app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
 app.use('/api/agendamentos', require('./routes/agendamentoRoutes'));
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
