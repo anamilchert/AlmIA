@@ -30,6 +30,9 @@ const conversaSchema = new mongoose.Schema({
 
   handoffEm: { type: Date, default: null },
   encerradaEm: { type: Date, default: null },
+  aguardandoHumano: { type: Boolean, default: false },
+  motivoHandoff: { type: String, default: null },
+  urgenciaHandoff: { type: String, enum: ['alta', 'media', 'baixa', null], default: null },
 
   mensagens: [mensagemSchema],
 
