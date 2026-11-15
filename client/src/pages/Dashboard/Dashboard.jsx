@@ -1,5 +1,6 @@
 import { Download, Calendar, MessagesSquare, Bot, Clock, UserCheck } from 'lucide-react';
 import './Dashboard.css';
+import HandoffsAguardando from './HandoffsAguardando';
 
 // TODO: trocar por dados da API (ex.: dashboardApi.js)
 const porHora = [
@@ -77,6 +78,8 @@ export default function Dashboard() {
         <button className="btn"><Calendar size={14} /> Esta semana</button>
         <button className="btn btn-primary"><Download size={14} /> Exportar</button>
       </div>
+
+            <HandoffsAguardando />
 
       <div className="metrics-grid">
         {metricas.map((m) => {
