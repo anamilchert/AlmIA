@@ -12,6 +12,7 @@ const MOTIVOS = [
   'outro'
 ];
 const URGENCIAS = ['alta', 'media', 'baixa'];
+const ASSUNTOS = ['agendamento', 'convenios', 'preparo_exames', 'horarios_endereco', 'valores', 'outro'];
 
 let client;
 function getClient() {
@@ -32,15 +33,23 @@ Precisa de humano (precisaHumano=true) quando o paciente:
 
 NÃO precisa de humano: saudações, dúvidas sobre horários, convênios, endereço, preparo de exames, valores, escolha de especialidade ou médico, e pedidos de agendamento ou cancelamento. Informar nome ou data de nascimento também não exige humano.
 
+Além disso, classifique o ASSUNTO principal da conversa:
+- agendamento: marcar, remarcar, cancelar ou escolher horário de consulta. Se a conversa recente é sobre agendamento, mantenha agendamento mesmo que a última mensagem seja só nome, data de nascimento ou horário
+- convenios: planos e convênios aceitos
+- preparo_exames: preparo, jejum e orientações de exames
+- horarios_endereco: horário de funcionamento, endereço, telefone
+- valores: preços e valores
+- outro: saudações e qualquer outro assunto
+
 Responda APENAS um JSON no formato:
-{"precisaHumano": true ou false, "motivo": "${MOTIVOS.join('|')}", "urgencia": "alta|media|baixa"}
+{"precisaHumano": true ou false, "motivo": "${MOTIVOS.join('|')}", "urgencia": "alta|media|baixa", "assunto": "${ASSUNTOS.join('|')}"}
 Se precisaHumano for false, use motivo "outro" e urgencia "baixa".`;
 
 function parametrosDoModelo() {
   if (MODELO.startsWith('gpt-5')) {
     return { max_completion_tokens: 300, reasoning_effort: 'none' };
   }
-  return { temperature: 0, max_tokens: 100 };
+  return { temperature: 0, max_tokens: 120 };
 }
 
 async function classificarMensagem(mensagens) {
@@ -68,12 +77,15 @@ async function classificarMensagem(mensagens) {
     const dados = JSON.parse(completion.choices[0].message.content);
     console.log(`[Classificador] ${JSON.stringify(dados)} em ${Date.now() - inicio}ms`);
 
-    if (!dados.precisaHumano) return { precisaHumano: false };
+    const assunto = ASSUNTOS.includes(dados.assunto) ? dados.assunto : 'outro';
+
+    if (!dados.precisaHumano) return { precisaHumano: false, assunto };
 
     return {
       precisaHumano: true,
       motivo: MOTIVOS.includes(dados.motivo) ? dados.motivo : 'outro',
-      urgencia: URGENCIAS.includes(dados.urgencia) ? dados.urgencia : 'media'
+      urgencia: URGENCIAS.includes(dados.urgencia) ? dados.urgencia : 'media',
+      assunto
     };
   } catch (e) {
     console.error('[Classificador] Erro:', {
