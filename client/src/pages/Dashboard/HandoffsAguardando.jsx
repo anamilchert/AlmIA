@@ -10,7 +10,8 @@ const MOTIVOS = {
   reclamacao: 'Reclamação',
   duvida_clinica: 'Dúvida clínica',
   falha_ia: 'IA indisponível',
-  outro: 'Precisa de atenção'
+  outro: 'Precisa de atenção',
+  nao_resolvido: 'IA não está resolvendo',
 };
 
 function haQuanto(data) {
