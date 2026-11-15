@@ -1,15 +1,15 @@
 const Conversa = require('../models/Conversa');
 const Paciente = require('../models/Paciente');
 const { enviarMensagemWhatsapp } = require('../services/whatsappService');
-const { gerarResposta } = require('../services/openaiService');
-// HANDOFF DESATIVADO TEMPORARIAMENTE
-// const { avaliarHandoff } = require('../services/handoffService');
+const { avaliarHandoff, responderIA } = require('../services/handoffService');
 const detectaIntencaoAgendamento = require('../utils/detectaIntencaoAgendamento');
 const { buscarPacientePorTelefone, buscarPacientePorNome } = require('./pacienteController');
 
 const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 const STATUS_VALIDOS = ['ia', 'humano', 'concluida'];
+const HANDOFF_NA_PRIMEIRA_FALA = false;
 
+const SAUDACAO = 'Olá! Como posso ajudar você hoje?';
 const PEDIR_NOME = 'Claro! Preciso do seu nome completo.';
 const PEDIR_NASCIMENTO = 'Poderia informar sua data de nascimento?';
 const DATA_INVALIDA = 'Não consegui entender a data. Pode informar no formato dd/mm/aaaa?';
@@ -31,20 +31,10 @@ function botDiz(conversa, texto) {
   conversa.mensagens.push({ remetente: 'bot', texto });
 }
 
-async function responderComIA(conversa) {
-  try {
-    return await gerarResposta(conversa.mensagens, {
-      contato: {
-        pacienteId: conversa.pacienteId,
-        nome: conversa.nome,
-        telefone: conversa.telefone
-      }
-    });
-  } catch (e) {
-    console.error('[IA] Falha ao responder na conversa', String(conversa._id), '-', e.message);
-    // TODO: remover a mensagem de erro visível no chat depois dos testes
-    return `[ERRO IA] ${e.message}`;
-  }
+async function responderOuEncaminhar(conversa, { handoffEmFalha }) {
+  const resposta = await responderIA(conversa, { handoffEmFalha });
+  if (resposta) botDiz(conversa, resposta);
+  return resposta;
 }
 
 async function salvarEResponder(conversa, res) {
@@ -143,6 +133,7 @@ async function enviarMensagem(req, res) {
 
     const textoLimpo = texto.trim();
     const primeiraFala = !conversa.mensagens.some((m) => m.remetente === 'bot');
+    const avaliarHandoffAgora = HANDOFF_NA_PRIMEIRA_FALA || !primeiraFala;
 
     if (primeiraFala && !conversa.pacienteId && conversa.telefone) {
       const conhecido = await buscarPacientePorTelefone(conversa.telefone);
@@ -158,6 +149,10 @@ async function enviarMensagem(req, res) {
       return await salvarEResponder(conversa, res);
     }
 
+    if (avaliarHandoffAgora && (await avaliarHandoff(conversa))) {
+      return await salvarEResponder(conversa, res);
+    }
+
     if (conversa.estado === 'coletando_nome') {
       conversa.nome = textoLimpo;
       const existente = await buscarPacientePorNome(textoLimpo);
@@ -166,7 +161,7 @@ async function enviarMensagem(req, res) {
         conversa.pacienteId = existente._id;
         conversa.estado = 'livre';
         conversa.mensagemPendente = null;
-        botDiz(conversa, await responderComIA(conversa));
+        await responderOuEncaminhar(conversa, { handoffEmFalha: true });
       } else {
         conversa.estado = 'coletando_nascimento';
         botDiz(conversa, PEDIR_NASCIMENTO);
@@ -197,27 +192,33 @@ async function enviarMensagem(req, res) {
       conversa.pacienteId = paciente._id;
       conversa.estado = 'livre';
       conversa.mensagemPendente = null;
-      botDiz(conversa, await responderComIA(conversa));
+      await responderOuEncaminhar(conversa, { handoffEmFalha: true });
       return await salvarEResponder(conversa, res);
     }
-
-    // HANDOFF DESATIVADO TEMPORARIAMENTE
-    // if (!primeiraFala && (await avaliarHandoff(conversa))) {
-    //   return await salvarEResponder(conversa, res);
-    // }
 
     if (detectaIntencaoAgendamento(textoLimpo) && !conversa.pacienteId) {
       conversa.estado = 'coletando_nome';
       conversa.mensagemPendente = textoLimpo;
       botDiz(conversa, PEDIR_NOME);
     } else {
-      botDiz(conversa, await responderComIA(conversa));
+      const resposta = await responderOuEncaminhar(conversa, { handoffEmFalha: avaliarHandoffAgora });
+      if (!resposta && conversa.status === 'ia') botDiz(conversa, SAUDACAO);
     }
 
     return await salvarEResponder(conversa, res);
   } catch (err) {
     console.error('[Conversa] Erro ao enviar mensagem:', err);
     res.status(500).json({ erro: 'Erro ao enviar mensagem.', detalhes: err.message });
+  }
+}
+
+async function removerConversa(req, res) {
+  try {
+    const removida = await Conversa.findOneAndDelete({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
+    if (!removida) return res.status(404).json({ erro: 'Conversa não encontrada.' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao apagar conversa.' });
   }
 }
 
@@ -286,5 +287,6 @@ module.exports = {
   criarConversa,
   enviarMensagem,
   responderComoAtendente,
-  atualizarStatus
+  atualizarStatus,
+  removerConversa
 };
