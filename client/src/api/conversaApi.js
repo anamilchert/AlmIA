@@ -31,3 +31,9 @@ export async function enviarMensagem(id, texto) {
   if (!res.ok) throw new Error('Erro ao enviar mensagem');
   return res.json();
 }
+
+export async function listarHandoffs() {
+  const res = await fetch(`${API_URL}/handoffs`);
+  if (!res.ok) throw new Error('Erro ao listar handoffs');
+  return res.json();
+}
