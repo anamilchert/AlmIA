@@ -1,61 +1,73 @@
 const OpenAI = require('openai');
 
+const MODELO = process.env.OPENAI_MODEL_CLASSIFICADOR || 'gpt-5.6-luna';
+const TIMEOUT_MS = 20000;
+const MOTIVOS = [
+  'sintomas_fisicos',
+  'emergencia',
+  'pedido_humano',
+  'reclamacao',
+  'nao_resolvido',
+  'duvida_clinica',
+  'outro'
+];
+const URGENCIAS = ['alta', 'media', 'baixa'];
+
 let client;
 function getClient() {
   if (!client) client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   return client;
 }
 
-const MOTIVOS = ['sintomas_fisicos', 'emergencia', 'pedido_humano', 'reclamacao', 'duvida_clinica', 'outro'];
-const URGENCIAS = ['alta', 'media', 'baixa'];
+const PROMPT = `Você analisa conversas entre pacientes e a recepção virtual de uma clínica médica, pelo WhatsApp.
+Decida se a conversa precisa agora de um atendente humano, considerando principalmente a ÚLTIMA mensagem do paciente e o contexto recente.
 
-const PROMPT = `Você classifica conversas de uma clínica médica pelo WhatsApp.
-Decida se a ÚLTIMA mensagem do paciente exige atendimento humano.
+Precisa de humano (precisaHumano=true) quando o paciente:
+- relata sintomas físicos, dor ou piora de saúde (motivo sintomas_fisicos)
+- diz que está em emergência, que é urgente, ou descreve risco à vida (motivo emergencia, urgencia alta)
+- pede para falar com uma pessoa, atendente ou humano (motivo pedido_humano)
+- reclama, está irritado ou insatisfeito com a clínica (motivo reclamacao)
+- demonstra que o atendimento virtual não está resolvendo o problema, repete o mesmo pedido sem sucesso ou diz que a recepção não entende (motivo nao_resolvido)
+- pede diagnóstico, receita, medicação ou orientação médica (motivo duvida_clinica)
 
-Exige humano (precisaHumano=true):
-- descrição de sintomas físicos ou piora de saúde (sintomas_fisicos)
-- emergência ou risco de vida (emergencia, urgencia alta)
-- paciente pede para falar com uma pessoa (pedido_humano)
-- reclamação, insatisfação ou conflito (reclamacao)
-- pedido de diagnóstico, receita, medicação ou orientação médica (duvida_clinica)
+NÃO precisa de humano: saudações, dúvidas sobre horários, convênios, endereço, preparo de exames, valores, escolha de especialidade ou médico, e pedidos de agendamento ou cancelamento. Informar nome ou data de nascimento também não exige humano.
 
-NÃO exige humano: dúvidas sobre horários, convênios, endereço, preparo de exames, valores e agendamentos.
+Responda APENAS um JSON no formato:
+{"precisaHumano": true ou false, "motivo": "${MOTIVOS.join('|')}", "urgencia": "alta|media|baixa"}
+Se precisaHumano for false, use motivo "outro" e urgencia "baixa".`;
 
-Responda APENAS JSON: {"precisaHumano": boolean, "motivo": "${MOTIVOS.join('|')}", "urgencia": "alta|media|baixa"}`;
-
-const REGEX_EMERGENCIA =
-  /(dor no peito|falta de ar|n[ãa]o consigo respirar|desmai|convuls|sangramento|infarto|\bavc\b|socorro|emerg[êe]ncia)/i;
-
-function fallback(mensagens) {
-  const ultima = [...mensagens].reverse().find((m) => m.remetente === 'paciente');
-  if (ultima && REGEX_EMERGENCIA.test(ultima.texto)) {
-    return { precisaHumano: true, motivo: 'emergencia', urgencia: 'alta' };
+function parametrosDoModelo() {
+  if (MODELO.startsWith('gpt-5')) {
+    return { max_completion_tokens: 300, reasoning_effort: 'none' };
   }
-  return { precisaHumano: false };
+  return { temperature: 0, max_tokens: 100 };
 }
 
 async function classificarMensagem(mensagens) {
   const recorte = mensagens
-    .slice(-6)
+    .slice(-8)
     .map((m) => `${m.remetente === 'paciente' ? 'Paciente' : 'Clínica'}: ${m.texto}`)
     .join('\n');
+
+  const inicio = Date.now();
 
   try {
     const completion = await getClient().chat.completions.create(
       {
-        model: 'gpt-4o-mini',
-        temperature: 0,
-        max_tokens: 80,
+        model: MODELO,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: PROMPT },
           { role: 'user', content: recorte }
-        ]
+        ],
+        ...parametrosDoModelo()
       },
-      { timeout: 10000, maxRetries: 1 }
+      { timeout: TIMEOUT_MS, maxRetries: 1 }
     );
 
     const dados = JSON.parse(completion.choices[0].message.content);
+    console.log(`[Classificador] ${JSON.stringify(dados)} em ${Date.now() - inicio}ms`);
+
     if (!dados.precisaHumano) return { precisaHumano: false };
 
     return {
@@ -64,8 +76,15 @@ async function classificarMensagem(mensagens) {
       urgencia: URGENCIAS.includes(dados.urgencia) ? dados.urgencia : 'media'
     };
   } catch (e) {
-    console.error('Falha no classificador de handoff:', e.message);
-    return fallback(mensagens);
+    console.error('[Classificador] Erro:', {
+      modelo: MODELO,
+      status: e.status,
+      codigo: e.code,
+      mensagem: e.message,
+      causa: e.cause?.code || e.cause?.message,
+      ms: Date.now() - inicio
+    });
+    throw e;
   }
 }
 
