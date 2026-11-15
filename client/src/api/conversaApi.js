@@ -37,3 +37,9 @@ export async function listarHandoffs() {
   if (!res.ok) throw new Error('Erro ao listar handoffs');
   return res.json();
 }
+
+export async function removerConversa(id) {
+  const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao apagar conversa');
+  return res.json();
+}
