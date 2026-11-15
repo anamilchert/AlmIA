@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Bot, UserCheck, CheckCircle2 } from 'lucide-react';
-import { listarConversas, criarConversa } from '../../api/conversaApi';
+import { Search, Plus, Bot, UserCheck, CheckCircle2, Trash2 } from 'lucide-react';
+import { listarConversas, criarConversa, removerConversa } from '../../api/conversaApi';
 import './ListaConversas.css';
 
 const STATUS_INFO = {
@@ -18,6 +18,7 @@ export default function ListaConversas() {
   const [novoNome, setNovoNome] = useState('');
   const [novoTelefone, setNovoTelefone] = useState('');
   const [erro, setErro] = useState(null);
+  const [confirmandoId, setConfirmandoId] = useState(null);
   const navigate = useNavigate();
 
   function carregar() {
@@ -47,6 +48,18 @@ export default function ListaConversas() {
       navigate(`/conversas/${nova._id}`);
     } catch (err) {
       setErro(err.message);
+    }
+  }
+
+  async function apagar(id) {
+    try {
+      await removerConversa(id);
+      setConversas((anteriores) => anteriores.filter((c) => c._id !== id));
+      setErro(null);
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setConfirmandoId(null);
     }
   }
 
@@ -115,6 +128,24 @@ export default function ListaConversas() {
                 <Icon size={12} strokeWidth={2} />
                 {info.label}
               </span>
+              {confirmandoId === c._id ? (
+                <div className="conversa-confirma" onClick={(e) => e.stopPropagation()}>
+                  <span>Apagar?</span>
+                  <button className="conversa-sim" onClick={() => apagar(c._id)}>Sim</button>
+                  <button className="conversa-nao" onClick={() => setConfirmandoId(null)}>Não</button>
+                </div>
+              ) : (
+                <button
+                  className="conversa-apagar"
+                  title="Apagar conversa"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmandoId(c._id);
+                  }}
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
             </div>
           );
         })}
