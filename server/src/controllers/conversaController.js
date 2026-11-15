@@ -1,12 +1,57 @@
 const Conversa = require('../models/Conversa');
 const Paciente = require('../models/Paciente');
-const { gerarResposta } = require('../services/openaiService');
 const { enviarMensagemWhatsapp } = require('../services/whatsappService');
+const { gerarResposta } = require('../services/openaiService');
+// HANDOFF DESATIVADO TEMPORARIAMENTE
+// const { avaliarHandoff } = require('../services/handoffService');
 const detectaIntencaoAgendamento = require('../utils/detectaIntencaoAgendamento');
 const { buscarPacientePorTelefone, buscarPacientePorNome } = require('./pacienteController');
 
 const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 const STATUS_VALIDOS = ['ia', 'humano', 'concluida'];
+
+const PEDIR_NOME = 'Claro! Preciso do seu nome completo.';
+const PEDIR_NASCIMENTO = 'Poderia informar sua data de nascimento?';
+const DATA_INVALIDA = 'Não consegui entender a data. Pode informar no formato dd/mm/aaaa?';
+
+function interpretarData(texto) {
+  const m = texto.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const dia = Number(m[1]);
+  const mes = Number(m[2]);
+  const ano = Number(m[3]);
+  const data = new Date(Date.UTC(ano, mes - 1, dia));
+  const valida =
+    data.getUTCFullYear() === ano && data.getUTCMonth() === mes - 1 && data.getUTCDate() === dia;
+  if (!valida || data > new Date()) return null;
+  return data;
+}
+
+function botDiz(conversa, texto) {
+  conversa.mensagens.push({ remetente: 'bot', texto });
+}
+
+async function responderComIA(conversa) {
+  try {
+    return await gerarResposta(conversa.mensagens, {
+      contato: {
+        pacienteId: conversa.pacienteId,
+        nome: conversa.nome,
+        telefone: conversa.telefone
+      }
+    });
+  } catch (e) {
+    console.error('[IA] Falha ao responder na conversa', String(conversa._id), '-', e.message);
+    // TODO: remover a mensagem de erro visível no chat depois dos testes
+    return `[ERRO IA] ${e.message}`;
+  }
+}
+
+async function salvarEResponder(conversa, res) {
+  conversa.ultimaMensagemEm = new Date();
+  await conversa.save();
+  return res.json(conversa);
+}
 
 async function listarConversas(req, res) {
   try {
@@ -29,6 +74,29 @@ async function listarConversas(req, res) {
   }
 }
 
+async function listarHandoffs(req, res) {
+  try {
+    const conversas = await Conversa.find({ ownerId: OWNER_ID_TESTE, aguardandoHumano: true })
+      .select('nome telefone motivoHandoff urgenciaHandoff handoffEm');
+
+    const peso = { alta: 0, media: 1, baixa: 2 };
+    const itens = conversas
+      .map((c) => ({
+        _id: c._id,
+        nome: c.nome,
+        telefone: c.telefone,
+        motivo: c.motivoHandoff,
+        urgencia: c.urgenciaHandoff || 'media',
+        desde: c.handoffEm
+      }))
+      .sort((a, b) => peso[a.urgencia] - peso[b.urgencia] || new Date(a.desde) - new Date(b.desde));
+
+    res.json({ total: itens.length, itens });
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao listar handoffs.' });
+  }
+}
+
 async function obterConversa(req, res) {
   try {
     const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
@@ -47,7 +115,6 @@ async function criarConversa(req, res) {
       return res.status(400).json({ erro: 'Nome é obrigatório para iniciar uma conversa.' });
     }
 
-    // vínculo automático e silencioso, se o telefone já for de um paciente conhecido
     const pacienteExistente = await buscarPacientePorTelefone(telefone);
 
     const novaConversa = await Conversa.create({
@@ -74,51 +141,47 @@ async function enviarMensagem(req, res) {
     const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
     if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
 
-    conversa.mensagens.push({ remetente: 'paciente', texto: texto.trim() });
+    const textoLimpo = texto.trim();
+    const primeiraFala = !conversa.mensagens.some((m) => m.remetente === 'bot');
 
-    // --- ETAPA: coletando nome (só entra aqui se uma intenção já disparou isso) ---
-    if (conversa.estado === 'coletando_nome') {
-      const nomeInformado = texto.trim();
-      const pacienteExistente = await buscarPacientePorNome(nomeInformado);
-      conversa.nome = nomeInformado;
-
-      if (pacienteExistente) {
-        conversa.pacienteId = pacienteExistente._id;
-        conversa.estado = 'livre';
-        conversa.mensagens.push({
-          remetente: 'bot',
-          texto: `Encontrei seu cadastro, ${pacienteExistente.nome.split(' ')[0]}! Só um instante...`
-        });
-        await resolverPedidoPendente(conversa);
-      } else {
-        conversa.estado = 'coletando_nascimento';
-        conversa.mensagens.push({
-          remetente: 'bot',
-          texto: 'Não encontrei seu cadastro. Pra continuar, poderia informar sua data de nascimento? (dd/mm/aaaa)'
-        });
+    if (primeiraFala && !conversa.pacienteId && conversa.telefone) {
+      const conhecido = await buscarPacientePorTelefone(conversa.telefone);
+      if (conhecido) {
+        conversa.pacienteId = conhecido._id;
+        conversa.nome = conhecido.nome;
       }
-
-      conversa.ultimaMensagemEm = new Date();
-      await conversa.save();
-      return res.json(conversa);
     }
 
-       // --- ETAPA: coletando nascimento ---
-    if (conversa.estado === 'coletando_nascimento') {
-      const [dia, mes, ano] = texto.trim().split('/');
-      const dataNascimento = ano ? new Date(`${ano}-${mes}-${dia}`) : null;
+    conversa.mensagens.push({ remetente: 'paciente', texto: textoLimpo });
 
-      if (!dataNascimento || isNaN(dataNascimento)) {
-        conversa.mensagens.push({
-          remetente: 'bot',
-          texto: 'Não consegui entender a data. Pode informar no formato dd/mm/aaaa?'
-        });
-        conversa.ultimaMensagemEm = new Date();
-        await conversa.save();
-        return res.json(conversa);
+    if (conversa.status !== 'ia') {
+      return await salvarEResponder(conversa, res);
+    }
+
+    if (conversa.estado === 'coletando_nome') {
+      conversa.nome = textoLimpo;
+      const existente = await buscarPacientePorNome(textoLimpo);
+
+      if (existente) {
+        conversa.pacienteId = existente._id;
+        conversa.estado = 'livre';
+        conversa.mensagemPendente = null;
+        botDiz(conversa, await responderComIA(conversa));
+      } else {
+        conversa.estado = 'coletando_nascimento';
+        botDiz(conversa, PEDIR_NASCIMENTO);
+      }
+      return await salvarEResponder(conversa, res);
+    }
+
+    if (conversa.estado === 'coletando_nascimento') {
+      const dataNascimento = interpretarData(textoLimpo);
+
+      if (!dataNascimento) {
+        botDiz(conversa, DATA_INVALIDA);
+        return await salvarEResponder(conversa, res);
       }
 
-      // reaproveita o cadastro se ele já existir (evita duplicar em nova tentativa)
       let paciente = await buscarPacientePorNome(conversa.nome);
       if (!paciente) {
         paciente = await Paciente.create({
@@ -133,64 +196,29 @@ async function enviarMensagem(req, res) {
 
       conversa.pacienteId = paciente._id;
       conversa.estado = 'livre';
-      conversa.mensagens.push({
-        remetente: 'bot',
-        texto: `Cadastro concluído, ${conversa.nome.split(' ')[0]}! Só um instante...`
-      });
-
-      // salva o cadastro ANTES de chamar a IA: se ela falhar, o estado não se perde
-      conversa.ultimaMensagemEm = new Date();
-      await conversa.save();
-
-      try {
-        await resolverPedidoPendente(conversa);
-      } catch (e) {
-        console.error('Falha ao retomar pedido pendente:', e.message);
-        conversa.mensagemPendente = null;
-        conversa.mensagens.push({
-          remetente: 'bot',
-          texto: 'Cadastro concluído! Como posso te ajudar?'
-        });
-      }
-
-      conversa.ultimaMensagemEm = new Date();
-      await conversa.save();
-      return res.json(conversa);
+      conversa.mensagemPendente = null;
+      botDiz(conversa, await responderComIA(conversa));
+      return await salvarEResponder(conversa, res);
     }
 
-    // --- FLUXO NORMAL: responde direto, sem interromper ---
-    // com humano atendendo, o bot não puxa o fluxo de identificação
-    const precisaIdentificar =
-      conversa.status === 'ia' && detectaIntencaoAgendamento(texto) && !conversa.pacienteId;
+    // HANDOFF DESATIVADO TEMPORARIAMENTE
+    // if (!primeiraFala && (await avaliarHandoff(conversa))) {
+    //   return await salvarEResponder(conversa, res);
+    // }
 
-    if (precisaIdentificar) {
+    if (detectaIntencaoAgendamento(textoLimpo) && !conversa.pacienteId) {
       conversa.estado = 'coletando_nome';
-      conversa.mensagemPendente = texto.trim();
-      conversa.mensagens.push({
-        remetente: 'bot',
-        texto: 'Claro! Pra localizar ou criar seu agendamento, preciso confirmar seu nome completo primeiro.'
-      });
-    } else if (conversa.status === 'ia') {
-      const respostaIA = await gerarResposta(conversa.mensagens);
-      conversa.mensagens.push({ remetente: 'bot', texto: respostaIA });
+      conversa.mensagemPendente = textoLimpo;
+      botDiz(conversa, PEDIR_NOME);
+    } else {
+      botDiz(conversa, await responderComIA(conversa));
     }
 
-    conversa.ultimaMensagemEm = new Date();
-    await conversa.save();
-    res.json(conversa);
-
+    return await salvarEResponder(conversa, res);
   } catch (err) {
+    console.error('[Conversa] Erro ao enviar mensagem:', err);
     res.status(500).json({ erro: 'Erro ao enviar mensagem.', detalhes: err.message });
   }
-}
-
-// depois de identificar o paciente, retoma o pedido original (ex: "quero agendar...")
-async function resolverPedidoPendente(conversa) {
-  if (!conversa.mensagemPendente) return;
-
-  const respostaIA = await gerarResposta(conversa.mensagens);
-  conversa.mensagens.push({ remetente: 'bot', texto: respostaIA });
-  conversa.mensagemPendente = null;
 }
 
 async function responderComoAtendente(req, res) {
@@ -210,11 +238,11 @@ async function responderComoAtendente(req, res) {
       conversa.status = 'humano';
       conversa.handoffEm = conversa.handoffEm || new Date();
     }
+    conversa.aguardandoHumano = false;
 
     conversa.ultimaMensagemEm = new Date();
     await conversa.save();
 
-    // entrega ao paciente no WhatsApp; conversas de teste (sem telefone real) só ficam salvas
     if (conversa.telefone) {
       try {
         await enviarMensagemWhatsapp(conversa.telefone, textoLimpo);
@@ -240,6 +268,7 @@ async function atualizarStatus(req, res) {
     if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
 
     conversa.status = status;
+    conversa.aguardandoHumano = false;
     if (status === 'humano' && !conversa.handoffEm) conversa.handoffEm = new Date();
     if (status === 'concluida') conversa.encerradaEm = new Date();
 
@@ -252,6 +281,7 @@ async function atualizarStatus(req, res) {
 
 module.exports = {
   listarConversas,
+  listarHandoffs,
   obterConversa,
   criarConversa,
   enviarMensagem,
