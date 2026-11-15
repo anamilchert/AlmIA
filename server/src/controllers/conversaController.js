@@ -1,7 +1,7 @@
 const Conversa = require('../models/Conversa');
 const Paciente = require('../models/Paciente');
 const { enviarMensagemWhatsapp } = require('../services/whatsappService');
-const { avaliarHandoff, responderIA } = require('../services/handoffService');
+const { avaliarHandoff, registrarAssunto, responderIA } = require('../services/handoffService');
 const detectaIntencaoAgendamento = require('../utils/detectaIntencaoAgendamento');
 const { buscarPacientePorTelefone, buscarPacientePorNome } = require('./pacienteController');
 
@@ -149,8 +149,12 @@ async function enviarMensagem(req, res) {
       return await salvarEResponder(conversa, res);
     }
 
-    if (avaliarHandoffAgora && (await avaliarHandoff(conversa))) {
-      return await salvarEResponder(conversa, res);
+        if (avaliarHandoffAgora) {
+      if (await avaliarHandoff(conversa)) {
+        return await salvarEResponder(conversa, res);
+      }
+    } else {
+      await registrarAssunto(conversa);
     }
 
     if (conversa.estado === 'coletando_nome') {
