@@ -2,6 +2,7 @@ jest.mock('../../src/models/Agendamento', () => ({
   find: jest.fn(),
   create: jest.fn(),
   findOneAndUpdate: jest.fn(),
+  findOneAndDelete: jest.fn(),
 }));
 
   jest.mock('../../src/services/finalizarAgendamentos', () => ({
@@ -12,7 +13,7 @@ jest.mock('../../src/models/Agendamento', () => ({
 const Agendamento = require('../../src/models/Agendamento');
 const {
   listarAgendamentos, criarAgendamento, atualizarStatus, removerAgendamento
-} = require('../controllers/agendamentoController');
+} = require('../../src/controllers/agendamentoController');
 
 function criarRes() {
   const res = {};
