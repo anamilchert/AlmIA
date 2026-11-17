@@ -8,6 +8,8 @@ const { gerarResposta } = require('../../src/services/openaiService');
 const { enviarMensagemWhatsapp } = require('../../src/services/whatsappService');
 const { buscarPacientePorTelefone } = require('../../src/controllers/pacienteController');
 const { verificarWebhook, receberMensagem } = require('../../src/controllers/whatsappController');
+jest.mock('../../src/services/classificadorService', () => ({ classificarMensagem: jest.fn() }));
+const { classificarMensagem } = require('../../src/services/classificadorService');
 
 const TELEFONE = '5511987654321';
 

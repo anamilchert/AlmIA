@@ -3,18 +3,18 @@ jest.mock('../../src/models/Paciente', () => ({
   findOne: jest.fn(),
   create: jest.fn(),
   insertMany: jest.fn(),
+  findOneAndDelete: jest.fn(),
 }));
+jest.mock('../../src/models/Conversa', () => ({ updateMany: jest.fn() }));
 jest.mock('../../src/utils/buildTimelinePaciente', () => jest.fn());
 jest.mock('xlsx', () => ({
   read: jest.fn(),
   utils: { sheet_to_json: jest.fn() },
 }));
-  jest.mock('../../src/services/finalizarAgendamentos', () => ({
-    finalizarAgendamentosVencidos: jest.fn(),
-  }));
 
 const XLSX = require('xlsx');
 const Paciente = require('../../src/models/Paciente');
+const Conversa = require('../../src/models/Conversa');
 const buildTimelinePaciente = require('../../src/utils/buildTimelinePaciente');
 const {
   listarPacientes,
@@ -23,6 +23,7 @@ const {
   buscarPacientePorTelefone,
   buscarPacientePorNome,
   importarPacientes,
+  removerPaciente,
 } = require('../../src/controllers/pacienteController');
 
 function criarRes() {
@@ -115,18 +116,26 @@ describe('criarPaciente', () => {
 });
 
 describe('buscarPacientePorTelefone', () => {
-  it('devolve null sem consultar o banco quando não há telefone', async () => {
+  it('devolve null sem consultar o banco quando o número é vazio ou curto', async () => {
     await expect(buscarPacientePorTelefone('')).resolves.toBeNull();
-    expect(Paciente.findOne).not.toHaveBeenCalled();
+    await expect(buscarPacientePorTelefone('123')).resolves.toBeNull();
+    expect(Paciente.find).not.toHaveBeenCalled();
   });
 
-  it('busca pelo telefone exato', async () => {
-    Paciente.findOne.mockResolvedValue({ _id: 'p1' });
-    await buscarPacientePorTelefone('5511987654321');
-    expect(Paciente.findOne).toHaveBeenCalledWith({
+  it('encontra o paciente pelos últimos 8 dígitos, ignorando a formatação', async () => {
+    const maria = { nome: 'Maria', telefone: '(47) 99123-4567' };
+    Paciente.find.mockResolvedValue([{ nome: 'João', telefone: '11 98888-7777' }, maria]);
+
+    await expect(buscarPacientePorTelefone('5547991234567')).resolves.toBe(maria);
+    expect(Paciente.find).toHaveBeenCalledWith({
       ownerId: 'owner-teste-001',
-      telefone: '5511987654321',
+      telefone: { $ne: '' },
     });
+  });
+
+  it('devolve null quando nenhum cadastro combina', async () => {
+    Paciente.find.mockResolvedValue([{ nome: 'João', telefone: '11 98888-7777' }]);
+    await expect(buscarPacientePorTelefone('5547991234567')).resolves.toBeNull();
   });
 });
 
@@ -137,6 +146,15 @@ describe('buscarPacientePorNome', () => {
     expect(Paciente.findOne).toHaveBeenCalledWith({
       ownerId: 'owner-teste-001',
       nome: { $regex: '^Maria Silva$', $options: 'i' },
+    });
+  });
+
+  it('escapa caracteres especiais de regex', async () => {
+    Paciente.findOne.mockResolvedValue(null);
+    await buscarPacientePorNome('Maria (Silva)');
+    expect(Paciente.findOne).toHaveBeenCalledWith({
+      ownerId: 'owner-teste-001',
+      nome: { $regex: '^Maria \\(Silva\\)$', $options: 'i' },
     });
   });
 });
@@ -196,5 +214,33 @@ describe('importarPacientes', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ detalhes: 'arquivo corrompido' })
     );
+  });
+});
+
+describe('removerPaciente', () => {
+  it('retorna 404 quando o paciente não existe', async () => {
+    Paciente.findOneAndDelete.mockResolvedValue(null);
+    const res = criarRes();
+    await removerPaciente({ params: { id: '1' } }, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(Conversa.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('remove o paciente e desvincula as conversas dele', async () => {
+    Paciente.findOneAndDelete.mockResolvedValue({ _id: 'p1' });
+    const res = criarRes();
+    await removerPaciente({ params: { id: 'p1' } }, res);
+    expect(Conversa.updateMany).toHaveBeenCalledWith(
+      { ownerId: 'owner-teste-001', pacienteId: 'p1' },
+      { $set: { pacienteId: null } }
+    );
+    expect(res.json).toHaveBeenCalledWith({ ok: true });
+  });
+
+  it('responde 500 se o banco falhar', async () => {
+    Paciente.findOneAndDelete.mockRejectedValue(new Error('banco'));
+    const res = criarRes();
+    await removerPaciente({ params: { id: '1' } }, res);
+    expect(res.status).toHaveBeenCalledWith(500);
   });
 });

@@ -7,6 +7,8 @@ jest.mock('../../src/controllers/pacienteController', () => ({
   buscarPacientePorNome: jest.fn(),
 }));
 jest.mock('../../src/utils/detectaIntencaoAgendamento', () => jest.fn());
+jest.mock('../../src/services/classificadorService', () => ({ classificarMensagem: jest.fn() }));
+const { classificarMensagem } = require('../../src/services/classificadorService');
 
 const Conversa = require('../../src/models/Conversa');
 const Paciente = require('../../src/models/Paciente');
