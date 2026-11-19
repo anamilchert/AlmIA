@@ -14,6 +14,7 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       include: ['src/**/*.{js,jsx}'],
       exclude: ['src/main.jsx', 'src/setupTests.js', 'src/**/*.test.{js,jsx}'],
+      thresholds: { statements: 25, branches: 25, functions: 25, lines: 25 },
     },
   },
 })
