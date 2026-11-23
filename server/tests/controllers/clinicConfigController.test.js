@@ -96,6 +96,18 @@ describe('updateConfig', () => {
     await updateConfig({ body: {} }, res);
     expect(res.status).toHaveBeenCalledWith(500);
   });
+
+    it('salva aceitaParticular quando o valor é booleano', async () => {
+    ClinicConfig.findOneAndUpdate.mockResolvedValue({});
+    await updateConfig({ body: { aceitaParticular: false } }, criarRes());
+    expect(ClinicConfig.findOneAndUpdate.mock.calls[0][1].$set).toEqual({ aceitaParticular: false });
+  });
+
+  it('ignora aceitaParticular quando não é booleano', async () => {
+    ClinicConfig.findOneAndUpdate.mockResolvedValue({});
+    await updateConfig({ body: { aceitaParticular: 'sim' } }, criarRes());
+    expect(ClinicConfig.findOneAndUpdate.mock.calls[0][1].$set).toEqual({});
+  });
 });
 
 describe('buildContextoParaIA', () => {
@@ -130,5 +142,38 @@ describe('buildContextoParaIA', () => {
     expect(texto).toContain('Convênios aceitos: Amil, Unimed');
     expect(texto).toContain('- Raio-X: Sem preparo');
     expect(texto).toContain('Mensagem fora do horário: Voltamos amanhã.');
+  });
+
+    const configComMedicos = (extra = {}) => ({
+    dadosGerais: { nomeClinica: 'Clínica X', endereco: 'Rua A, 10', telefonePrincipal: '4733334444' },
+    horarios: [{ dia: 'Segunda', abertura: '08:00', fechamento: '18:00', ativo: true }],
+    convenios: ['Amil'],
+    listaEspecialidades: ['Ortopedia', 'Cardiologia'],
+    medicos: [
+      { nome: 'Dr. Ricardo', especialidade: 'Ortopedia', valorConsulta: 250 },
+      { nome: 'Dra. Ana', especialidade: 'Cardiologia' },
+      { nome: 'Dr. Paulo' },
+    ],
+    mensagensBot: { boasVindas: 'Olá!', foraHorario: 'Voltamos amanhã.' },
+    preparoExames: [{ nome: 'Raio-X', instrucoes: 'Sem preparo' }],
+    ...extra,
+  });
+
+  it('lista os médicos com o valor da consulta particular', async () => {
+    ClinicConfig.findOne.mockResolvedValue(configComMedicos());
+    const texto = await buildContextoParaIA('owner-1');
+    expect(texto).toContain('Especialidades: Ortopedia, Cardiologia');
+    expect(texto).toContain('- Dr. Ricardo (Ortopedia): consulta particular R$ 250,00');
+    expect(texto).toContain('- Dra. Ana (Cardiologia): consulta particular valor não informado');
+    expect(texto).toContain('- Dr. Paulo: consulta particular valor não informado');
+    expect(texto).toContain('a clínica atende particular');
+  });
+
+  it('não cita valores quando a clínica não atende particular', async () => {
+    ClinicConfig.findOne.mockResolvedValue(configComMedicos({ aceitaParticular: false }));
+    const texto = await buildContextoParaIA('owner-1');
+    expect(texto).toContain('- Dr. Ricardo (Ortopedia)');
+    expect(texto).not.toContain('R$');
+    expect(texto).toContain('NÃO atende particular');
   });
 });
