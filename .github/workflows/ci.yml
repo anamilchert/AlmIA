@@ -12,20 +12,6 @@ jobs:
     defaults:
       run:
         working-directory: server
-    client:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: client
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-      - run: npm ci --ignore-scripts
-      - run: npm run test:coverage      
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,9 +26,34 @@ jobs:
           name: server-coverage
           path: server/coverage/lcov.info
 
+  client:
+    name: Front-end (testes, cobertura e build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run test:coverage
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-coverage
+          path: client/coverage/lcov.info
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+
   sonar:
     name: SonarCloud
-    needs: server
+    needs: [server, client]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,8 +63,32 @@ jobs:
         with:
           name: server-coverage
           path: server/coverage
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-coverage
+          path: client/coverage
       - name: Ajusta caminhos do lcov para a raiz do repositório
-        run: sed -i 's#^SF:src/#SF:server/src/#' server/coverage/lcov.info
-      - uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5.3.2
+        run: |
+          sed -i 's#^SF:src/#SF:server/src/#' server/coverage/lcov.info
+          sed -i 's#^SF:src/#SF:client/src/#' client/coverage/lcov.info
+      - uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  deploy-frontend:
+    name: Deploy do front-end (Hostinger)
+    needs: client
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: dist
+      - uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: dist/
+          server-dir: ${{ secrets.FTP_DIR }}

@@ -22,6 +22,7 @@ const medicoSchema = new mongoose.Schema(
   {
     nome: { type: String, required: true, trim: true },
     especialidade: { type: String, default: '', trim: true },
+    valorConsulta: { type: Number, default: null, min: 0 },
   },
   { _id: false }
 );
@@ -57,7 +58,6 @@ const clinicConfigSchema = new mongoose.Schema(
     },
 
     convenios: { type: [String], default: [] },
-
     listaEspecialidades: { type: [String], default: [] },
 
     medicos: { type: [medicoSchema], default: [] },

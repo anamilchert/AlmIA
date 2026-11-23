@@ -113,4 +113,38 @@ describe('responderIA', () => {
     await expect(responderIA(conversa, { handoffEmFalha: false })).resolves.toBeNull();
     expect(conversa.status).toBe('ia');
   });
+
+  it('passa para humano quando a IA responde [HUMANO]', async () => {
+    gerarResposta.mockResolvedValue('[HUMANO]');
+    const conversa = novaConversa();
+    await expect(responderIA(conversa)).resolves.toBeNull();
+    expect(conversa).toMatchObject({
+      status: 'humano',
+      aguardandoHumano: true,
+      motivoHandoff: 'sem_informacao',
+    });
+  });
+
+  it('encerra a conversa quando a IA responde [ENCERRAR]', async () => {
+    gerarResposta.mockResolvedValue('[ENCERRAR]');
+    const conversa = novaConversa({ aguardandoHumano: true });
+    await expect(responderIA(conversa)).resolves.toBeNull();
+    expect(conversa.status).toBe('concluida');
+    expect(conversa.encerradaEm).toBeInstanceOf(Date);
+    expect(conversa.aguardandoHumano).toBe(false);
+  });
+
+  it('reconhece o marcador em minúsculas e junto de outro texto', async () => {
+    gerarResposta.mockResolvedValue('[humano] não sei responder');
+    const conversa = novaConversa();
+    await expect(responderIA(conversa)).resolves.toBeNull();
+    expect(conversa.status).toBe('humano');
+  });
+
+  it('devolve a resposta vazia sem alterar a conversa', async () => {
+    gerarResposta.mockResolvedValue(undefined);
+    const conversa = novaConversa();
+    await expect(responderIA(conversa)).resolves.toBeUndefined();
+    expect(conversa.status).toBe('ia');
+  });
 });

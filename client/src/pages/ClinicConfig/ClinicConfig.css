@@ -231,3 +231,7 @@
   font-size: 13.5px; font-family: var(--font); outline: none; background: var(--gray-25); color: var(--gray-800);
 }
 .add-conv-row select:focus { border-color: var(--blue-400); background: #fff; }
+.conv-tag .medico-valor {
+  width: 82px; padding: 2px 8px; font-size: 12px; border-radius: 10px;
+  border: 1px solid var(--blue-100); background: #fff; outline: none;
+}

@@ -25,7 +25,7 @@ export default function ClinicConfig() {
   const [statusSalvo, setStatusSalvo] = useState(false);
   const [erro, setErro] = useState(null);
   const [novaEspecialidade, setNovaEspecialidade] = useState('');
-  const [novoMedico, setNovoMedico] = useState({ nome: '', especialidade: '' });
+  const [novoMedico, setNovoMedico] = useState({ nome: '', especialidade: '', valorConsulta: '' });
 
   useEffect(() => {
     getClinicConfig()
@@ -83,25 +83,42 @@ export default function ClinicConfig() {
       listaEspecialidades: (prev.listaEspecialidades ?? []).filter((_, i) => i !== index),
     }));
   }
+  function lerValor(texto) {
+    const numero = parseFloat(String(texto).replace(',', '.'));
+    return Number.isFinite(numero) && numero >= 0 ? numero : null;
+  }
 
   function adicionarMedico() {
     const nome = novoMedico.nome.trim();
     if (!nome) return;
+    const valorConsulta = lerValor(novoMedico.valorConsulta);
     setConfig((prev) => {
       const lista = prev.medicos ?? [];
       const existe = lista.some(
         (m) => m.nome === nome && m.especialidade === novoMedico.especialidade
       );
       if (existe) return prev;
-      return { ...prev, medicos: [...lista, { nome, especialidade: novoMedico.especialidade }] };
+      return {
+        ...prev,
+        medicos: [...lista, { nome, especialidade: novoMedico.especialidade, valorConsulta }],
+      };
     });
-    setNovoMedico({ nome: '', especialidade: novoMedico.especialidade });
+    setNovoMedico({ nome: '', especialidade: novoMedico.especialidade, valorConsulta: '' });
   }
 
   function removerMedico(index) {
     setConfig((prev) => ({
       ...prev,
       medicos: (prev.medicos ?? []).filter((_, i) => i !== index),
+    }));
+  }
+
+    function atualizarValorMedico(index, texto) {
+    setConfig((prev) => ({
+      ...prev,
+      medicos: (prev.medicos ?? []).map((m, i) =>
+        i === index ? { ...m, valorConsulta: lerValor(texto) } : m
+      ),
     }));
   }
 
@@ -338,6 +355,16 @@ export default function ClinicConfig() {
                       <div className="conv-tag" key={`${m.nome}-${m.especialidade}`}>
                         {m.nome}
                         {m.especialidade && <small>{m.especialidade}</small>}
+                        <input
+                          className="medico-valor"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={m.valorConsulta ?? ''}
+                          placeholder="R$"
+                          aria-label={`Valor da consulta de ${m.nome}`}
+                          onChange={(e) => atualizarValorMedico(i, e.target.value)}
+                        />
                         <button onClick={() => removerMedico(i)} aria-label={`Remover ${m.nome}`}>
                           <X size={13} strokeWidth={2} />
                         </button>
@@ -361,6 +388,15 @@ export default function ClinicConfig() {
                         <option key={e} value={e}>{e}</option>
                       ))}
                     </select>
+                     <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={novoMedico.valorConsulta}
+                      placeholder="Valor (R$)"
+                      onChange={(e) => setNovoMedico((m) => ({ ...m, valorConsulta: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && adicionarMedico()}
+                    />
                     <button className="btn btn-primary" onClick={adicionarMedico}>
                       <Plus size={15} strokeWidth={2} />
                       Adicionar
@@ -378,6 +414,12 @@ export default function ClinicConfig() {
                 <div className="cfg-card-sub">O bot responderá automaticamente com essa lista</div>
               </header>
               <div className="cfg-card-body">
+                 <ToggleRow
+                  label="Aceita consulta particular"
+                  desc="Quando o paciente não tem convênio, o assistente oferece a consulta particular com o valor do médico"
+                  valor={config.aceitaParticular !== false}
+                  onChange={(v) => setConfig((prev) => ({ ...prev, aceitaParticular: v }))}
+                />
                 <div className="conv-wrap">
                   {config.convenios.map((c, i) => (
                     <div className="conv-tag" key={c}>

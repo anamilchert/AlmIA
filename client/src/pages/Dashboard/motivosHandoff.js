@@ -6,7 +6,8 @@ export const MOTIVOS = {
   nao_resolvido: 'IA não está resolvendo',
   duvida_clinica: 'Dúvida clínica',
   falha_ia: 'IA indisponível',
-  outro: 'Precisa de atenção'
+  outro: 'Precisa de atenção',
+  sem_informacao: 'IA não tinha a informação',
 };
 
 export function nomeDoMotivo(motivo) {
