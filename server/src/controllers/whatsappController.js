@@ -2,6 +2,7 @@ const Conversa = require('../models/Conversa');
 const { enviarMensagemWhatsapp } = require('../services/whatsappService');
 const { avaliarHandoff, registrarAssunto, responderIA } = require('../services/handoffService');
 const { buscarPacientePorTelefone } = require('./pacienteController');
+const { numeroBloqueado } = require('../utils/numerosBloqueados');
 
 const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 const HANDOFF_NA_PRIMEIRA_FALA = false;
@@ -29,6 +30,12 @@ async function receberMensagem(req, res) {
     }
 
     const numeroPaciente = mensagemRecebida.from;
+
+        if (numeroBloqueado(numeroPaciente)) {
+      console.log('[WhatsApp] Mensagem de número bloqueado ignorada');
+      return res.sendStatus(200);
+    }
+
     const textoRecebido = (mensagemRecebida.text?.body || '').trim();
     const nomeContato = change.value.contacts?.[0]?.profile?.name || numeroPaciente;
 

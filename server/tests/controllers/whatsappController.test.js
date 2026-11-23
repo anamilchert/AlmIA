@@ -71,6 +71,20 @@ describe('receberMensagem', () => {
     gerarResposta.mockResolvedValue('Resposta da IA');
     const res = criarRes();
 
+    it('ignora mensagens de números bloqueados', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+    process.env.NUMEROS_BLOQUEADOS = TELEFONE;
+    const res = criarRes();
+
+    await receberMensagem(criarReq({ from: TELEFONE, text: { body: 'Cobrança' } }), res);
+
+    expect(res.sendStatus).toHaveBeenCalledWith(200);
+    expect(Conversa.findOne).not.toHaveBeenCalled();
+    expect(gerarResposta).not.toHaveBeenCalled();
+    delete process.env.NUMEROS_BLOQUEADOS;
+    log.mockRestore();
+  });  
+
     await receberMensagem(criarReq({ from: TELEFONE, text: { body: 'Oi' } }), res);
 
     expect(Conversa.findOne).toHaveBeenCalledWith(

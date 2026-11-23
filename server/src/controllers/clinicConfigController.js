@@ -28,6 +28,7 @@ exports.updateConfig = async (req, res) => {
       dadosGerais,
       horarios,
       convenios,
+      aceitaParticular,
       listaEspecialidades,
       medicos,
       preparoExames,
@@ -42,6 +43,7 @@ exports.updateConfig = async (req, res) => {
           ...(dadosGerais && { dadosGerais }),
           ...(horarios && { horarios }),
           ...(convenios && { convenios }),
+          ...(typeof aceitaParticular === 'boolean' && { aceitaParticular }),
           ...(listaEspecialidades && { listaEspecialidades }),
           ...(medicos && { medicos }),
           ...(preparoExames && { preparoExames }),
@@ -74,18 +76,33 @@ exports.buildContextoParaIA = async (ownerId) => {
 
   const especialidadesTexto = (config.listaEspecialidades || []).join(', ');
 
+  const aceitaParticular = config.aceitaParticular !== false;
+
   const medicosTexto = (config.medicos || [])
-    .map((m) => (m.especialidade ? `${m.nome} (${m.especialidade})` : m.nome))
-    .join(', ');
+    .map((m) => {
+      const titulo = m.especialidade ? `${m.nome} (${m.especialidade})` : m.nome;
+      if (!aceitaParticular) return `- ${titulo}`;
+      const valor = Number.isFinite(m.valorConsulta)
+        ? `R$ ${m.valorConsulta.toFixed(2).replace('.', ',')}`
+        : 'valor não informado';
+      return `- ${titulo}: consulta particular ${valor}`;
+    })
+    .join('\n');
+
+  const particularTexto = aceitaParticular
+    ? 'a clínica atende particular'
+    : 'a clínica NÃO atende particular, apenas convênios';
 
   return `
 Nome da clínica: ${config.dadosGerais.nomeClinica}
 Especialidades: ${especialidadesTexto}
-Médicos: ${medicosTexto}
+Médicos:
+${medicosTexto}
 Endereço: ${config.dadosGerais.endereco}
 Telefone: ${config.dadosGerais.telefonePrincipal}
 Horário de funcionamento: ${horariosTexto}
 Convênios aceitos: ${config.convenios.join(', ')}
+Consulta particular: ${particularTexto}
 
 Mensagem de boas-vindas padrão: ${config.mensagensBot.boasVindas}
 Mensagem fora do horário: ${config.mensagensBot.foraHorario}
