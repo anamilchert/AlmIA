@@ -22,7 +22,16 @@ const ferramentas = [
         properties: {
           data: { type: 'string', description: 'Data no formato AAAA-MM-DD' },
           especialidade: { type: 'string', description: 'Especialidade desejada. Pode omitir se a clínica tiver apenas uma' },
-          medico: { type: 'string', description: 'Nome do médico, apenas se o paciente pediu um específico' }
+          medico: { type: 'string', description: 'Nome do médico, apenas se o paciente pediu um específico' },
+          tipo_atendimento: {
+            type: 'string',
+            enum: ['particular', 'convenio'],
+            description: 'Se a consulta será particular ou por convênio, conforme o paciente informou'
+          },
+          convenio: {
+            type: 'string',
+            description: 'Nome do convênio do paciente, quando a consulta for por convênio'
+          }
         },
         required: ['data']
       }
@@ -41,6 +50,15 @@ const ferramentas = [
           hora: { type: 'string', description: 'Horário no formato HH:mm' },
           especialidade: { type: 'string', description: 'Especialidade da consulta. Pode omitir se a clínica tiver apenas uma' },
           medico: { type: 'string', description: 'Nome do médico, apenas se o paciente pediu um específico' },
+          tipo_atendimento: {
+            type: 'string',
+            enum: ['particular', 'convenio'],
+            description: 'Se a consulta será particular ou por convênio, conforme o paciente informou'
+          },
+          convenio: {
+            type: 'string',
+            description: 'Nome do convênio do paciente. Obrigatório quando tipo_atendimento for convenio'
+          },
           nome_completo: {
             type: 'string',
             description: 'Nome completo do paciente. Obrigatório somente quando o paciente ainda não é cadastrado'
@@ -98,7 +116,14 @@ function acharPorNome(lista, texto) {
   );
 }
 
-async function prepararDia(ownerId, { data, especialidade, medico }) {
+function aceitaConvenio(medico, convenio) {
+  if (medico.atendeConvenio === false) return false;
+  const aceitos = medico.convenios || [];
+  if (!aceitos.length || !convenio) return true;
+  return aceitos.some((c) => normalizar(c) === normalizar(convenio));
+}
+
+async function prepararDia(ownerId, { data, especialidade, medico, tipo_atendimento: tipo, convenio }) {
   if (!diaValido(data)) return { erro: 'Data inválida. Use o formato AAAA-MM-DD.' };
 
   const agora = Date.now();
@@ -109,6 +134,16 @@ async function prepararDia(ownerId, { data, especialidade, medico }) {
 
   const config = await ClinicConfig.findOne({ owner: ownerId });
   if (!config) return { erro: 'A clínica ainda não configurou os horários de atendimento.' };
+
+  const porConvenio = tipo === 'convenio';
+  let convenioFinal = '';
+  if (porConvenio && String(convenio || '').trim()) {
+    const aceitosDaClinica = config.convenios || [];
+    convenioFinal = acharPorNome(aceitosDaClinica, convenio);
+    if (!convenioFinal) {
+      return { erro: `Convênio não aceito. Aceitos: ${aceitosDaClinica.join(', ') || 'nenhum'}.` };
+    }
+  }
 
   const lista = config.listaEspecialidades || [];
   const informada = normalizar(especialidade) ? especialidade : lista.length === 1 ? lista[0] : '';
@@ -126,14 +161,35 @@ async function prepararDia(ownerId, { data, especialidade, medico }) {
     return { erro: 'Informe a especialidade.' };
   }
 
-  const doutores = (config.medicos || [])
-    .filter((m) => normalizar(m.especialidade) === normalizar(especialidadeFinal))
-    .map((m) => m.nome);
+  const doutoresDaEspecialidade = (config.medicos || []).filter(
+    (m) => normalizar(m.especialidade) === normalizar(especialidadeFinal)
+  );
+  const elegiveis = porConvenio
+    ? doutoresDaEspecialidade.filter((m) => aceitaConvenio(m, convenioFinal))
+    : doutoresDaEspecialidade;
+
+  if (porConvenio && doutoresDaEspecialidade.length && !elegiveis.length) {
+    const alvo = convenioFinal ? `o convênio ${convenioFinal}` : 'por convênio';
+    return { erro: `Nenhum médico dessa especialidade atende ${alvo}.` };
+  }
+
+  const doutores = elegiveis.map((m) => m.nome);
 
   let candidatos = doutores;
   if (medico) {
     const achado = acharPorNome(doutores, medico);
     if (!achado) {
+      const pedido = porConvenio
+        ? acharPorNome(doutoresDaEspecialidade.map((m) => m.nome), medico)
+        : null;
+      if (pedido) {
+        const ficha = doutoresDaEspecialidade.find((m) => m.nome === pedido);
+        if (ficha.atendeConvenio === false) {
+          return { erro: 'Esse médico atende apenas consulta particular.' };
+        }
+        const aceitos = ficha.convenios && ficha.convenios.length ? ficha.convenios : config.convenios || [];
+        return { erro: `Esse médico não atende esse convênio. Convênios dele: ${aceitos.join(', ')}.` };
+      }
       return {
         erro: doutores.length
           ? `Médico não encontrado nessa especialidade. Disponíveis: ${doutores.join(', ')}.`
@@ -154,7 +210,14 @@ async function prepararDia(ownerId, { data, especialidade, medico }) {
     data: { $gte: inicioDia, $lt: new Date(inicioDia.getTime() + DIA_MS) }
   });
 
-  return { especialidade: especialidadeFinal, candidatos, janela, ocupados, diaSemana };
+  return {
+    especialidade: especialidadeFinal,
+    candidatos,
+    janela,
+    ocupados,
+    diaSemana,
+    convenio: convenioFinal
+  };
 }
 
 function medicoLivre(ocupados, { inicio, fim, especialidade, candidatos }) {
@@ -202,7 +265,12 @@ async function agendar(ownerId, contato, params) {
   const preparado = await prepararDia(ownerId, params);
   if (preparado.erro) return { erro: preparado.erro };
 
-  const { especialidade, candidatos, janela, ocupados, diaSemana } = preparado;
+  const { especialidade, candidatos, janela, ocupados, diaSemana, convenio } = preparado;
+
+  const tipo = ['particular', 'convenio'].includes(params.tipo_atendimento)
+    ? params.tipo_atendimento
+    : '';
+  if (tipo === 'convenio' && !convenio) return { erro: 'Informe qual é o convênio do paciente.' };
 
   if (!gerarHorarios(janela.abertura, janela.fechamento).includes(params.hora)) {
     return { erro: 'Esse horário está fora do funcionamento da clínica.' };
@@ -240,6 +308,8 @@ async function agendar(ownerId, contato, params) {
     telefone: contato.telefone || '',
     especialidade,
     medico,
+    tipoAtendimento: tipo,
+    convenio,
     data: inicioDate,
     duracaoMinutos: PASSO_MINUTOS,
     status: 'confirmado',
@@ -252,7 +322,8 @@ async function agendar(ownerId, contato, params) {
     medico: medico || null,
     data: params.data.split('-').reverse().join('/'),
     hora: params.hora,
-    dia_semana: diaSemana
+    dia_semana: diaSemana,
+    ...(tipo && { tipo_atendimento: tipo })
   };
 }
 

@@ -39,15 +39,35 @@ async function registrarAssunto(conversa) {
   }
 }
 
+function encerrarConversa(conversa) {
+  conversa.status = 'concluida';
+  conversa.encerradaEm = new Date();
+  conversa.aguardandoHumano = false;
+}
+
+function interpretarResposta(conversa, resposta) {
+  const marcador = String(resposta || '').toUpperCase();
+  if (marcador.includes('[HUMANO]')) {
+    marcarHandoff(conversa, 'sem_informacao', 'media');
+    return null;
+  }
+  if (marcador.includes('[ENCERRAR]')) {
+    encerrarConversa(conversa);
+    return null;
+  }
+  return resposta;
+}
+
 async function responderIA(conversa, { handoffEmFalha = true } = {}) {
   try {
-    return await gerarResposta(conversa.mensagens, {
+        const resposta = await gerarResposta(conversa.mensagens, {
       contato: {
         pacienteId: conversa.pacienteId,
         nome: conversa.nome,
         telefone: conversa.telefone
       }
     });
+    return interpretarResposta(conversa, resposta);
   } catch (e) {
     console.error('[IA] Falha ao responder na conversa', String(conversa._id), '-', e.message);
     if (handoffEmFalha) marcarHandoff(conversa, 'falha_ia', 'media');
