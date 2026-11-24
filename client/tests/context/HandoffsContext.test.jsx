@@ -74,9 +74,9 @@ describe('HandoffsContext', () => {
     listarHandoffs.mockResolvedValue({ total: 2, itens: [{ _id: 'a' }, { _id: 'b' }] });
     renderizar();
 
-    await waitFor(() => expect(screen.getByTestId('total')).toHaveTextContent('2'));
+       await waitFor(() => expect(screen.getByTestId('total')).toHaveTextContent('2'));
     expect(screen.getByTestId('itens')).toHaveTextContent('2');
-    expect(document.title).toBe('(2) Almia');
+    await waitFor(() => expect(document.title).toBe('(2) Almia'));
   });
 
   it('usa o título simples quando não há handoffs', async () => {
@@ -137,11 +137,10 @@ describe('HandoffsContext', () => {
     await aguardar(0); // primeira busca: só registra os existentes
     expect(startMock).not.toHaveBeenCalled();
 
-    // o navegador só libera o áudio depois de um clique na página
     await act(async () => { window.dispatchEvent(new Event('pointerdown')); });
     await aguardar(0);
 
-    await aguardar(5000); // segunda busca traz o handoff "b"
+    await aguardar(5000);
     expect(startMock).toHaveBeenCalled();
   });
 

@@ -3,15 +3,22 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Sidebar from '../../src/Components/Sidebar/Sidebar';
 import { useHandoffs } from '../../src/context/HandoffsContext';
+import { useAuth } from '../../src/context/AuthContext';
 
 const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }));
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => navigateMock }));
 vi.mock('../../src/context/HandoffsContext', () => ({ useHandoffs: vi.fn() }));
+vi.mock('../../src/context/AuthContext', () => ({ useAuth: vi.fn() }));
+
+const sairMock = vi.fn();
+const gestor = { nome: 'Mariana Reis', papel: 'gestor' };
 
 beforeEach(() => {
   navigateMock.mockReset();
+  sairMock.mockReset();
   useHandoffs.mockReturnValue({ total: 0 });
+  useAuth.mockReturnValue({ usuario: gestor, sair: sairMock });
 });
 
 describe('Sidebar', () => {
@@ -55,5 +62,28 @@ describe('Sidebar', () => {
   it('não mostra o contador quando não há pendências', () => {
     const { container } = render(<Sidebar />);
     expect(container.querySelector('.sb-badge')).toBeNull();
+  });
+
+  it('mostra as iniciais e o perfil do usuário logado', () => {
+    render(<Sidebar />);
+    expect(screen.getByText('MR')).toBeInTheDocument();
+    expect(screen.getByText('Gestor')).toBeInTheDocument();
+  });
+
+  it('esconde o item Clínica para quem é da recepção', () => {
+    useAuth.mockReturnValue({ usuario: { nome: 'Paula Souza', papel: 'recepcao' }, sair: sairMock });
+    render(<Sidebar />);
+
+    expect(screen.queryByRole('button', { name: /Clínica/ })).toBeNull();
+    expect(screen.getByText('Recepcionista')).toBeInTheDocument();
+  });
+
+  it('encerra a sessão e volta para o login ao clicar em Sair', async () => {
+    render(<Sidebar />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
+
+    expect(sairMock).toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith('/login');
   });
 });
