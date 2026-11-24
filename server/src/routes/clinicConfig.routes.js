@@ -1,12 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const clinicConfigController = require('../controllers/clinicConfigController');
-
-// MODO TESTE: sem authMiddleware por enquanto.
-// const authMiddleware = require('../middlewares/authMiddleware');
-// router.use(authMiddleware);
+const { exigirPapel } = require('../middlewares/autenticar');
 
 router.get('/', clinicConfigController.getConfig);
-router.put('/', clinicConfigController.updateConfig);
+router.put('/', exigirPapel('gestor'), clinicConfigController.updateConfig);
 
 module.exports = router;
