@@ -23,6 +23,7 @@ const medicoSchema = new mongoose.Schema(
     nome: { type: String, required: true, trim: true },
     especialidade: { type: String, default: '', trim: true },
     valorConsulta: { type: Number, default: null, min: 0 },
+    informacoesExtras: { type: String, default: '', trim: true, maxlength: 500 },
   },
   { _id: false }
 );
