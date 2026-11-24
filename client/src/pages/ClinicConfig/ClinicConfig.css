@@ -235,3 +235,8 @@
   width: 82px; padding: 2px 8px; font-size: 12px; border-radius: 10px;
   border: 1px solid var(--blue-100); background: #fff; outline: none;
 }
+
+.conv-tag .medico-extra {
+  width: 240px; padding: 2px 8px; font-size: 12px; border-radius: 10px;
+  border: 1px solid var(--blue-100); background: #fff; outline: none;
+}

@@ -25,7 +25,7 @@ export default function ClinicConfig() {
   const [statusSalvo, setStatusSalvo] = useState(false);
   const [erro, setErro] = useState(null);
   const [novaEspecialidade, setNovaEspecialidade] = useState('');
-  const [novoMedico, setNovoMedico] = useState({ nome: '', especialidade: '', valorConsulta: '' });
+  const [novoMedico, setNovoMedico] = useState({ nome: '', especialidade: '', valorConsulta: '', informacoesExtras: '' });
 
   useEffect(() => {
     getClinicConfig()
@@ -98,12 +98,25 @@ export default function ClinicConfig() {
         (m) => m.nome === nome && m.especialidade === novoMedico.especialidade
       );
       if (existe) return prev;
-      return {
+            return {
         ...prev,
-        medicos: [...lista, { nome, especialidade: novoMedico.especialidade, valorConsulta }],
+        medicos: [
+          ...lista,
+          {
+            nome,
+            especialidade: novoMedico.especialidade,
+            valorConsulta,
+            informacoesExtras: novoMedico.informacoesExtras.trim(),
+          },
+        ],
       };
     });
-    setNovoMedico({ nome: '', especialidade: novoMedico.especialidade, valorConsulta: '' });
+    setNovoMedico({
+      nome: '',
+      especialidade: novoMedico.especialidade,
+      valorConsulta: '',
+      informacoesExtras: '',
+    });
   }
 
   function removerMedico(index) {
@@ -118,6 +131,15 @@ export default function ClinicConfig() {
       ...prev,
       medicos: (prev.medicos ?? []).map((m, i) =>
         i === index ? { ...m, valorConsulta: lerValor(texto) } : m
+      ),
+    }));
+  }
+
+    function atualizarInfoMedico(index, texto) {
+    setConfig((prev) => ({
+      ...prev,
+      medicos: (prev.medicos ?? []).map((m, i) =>
+        i === index ? { ...m, informacoesExtras: texto } : m
       ),
     }));
   }
@@ -365,6 +387,15 @@ export default function ClinicConfig() {
                           aria-label={`Valor da consulta de ${m.nome}`}
                           onChange={(e) => atualizarValorMedico(i, e.target.value)}
                         />
+                         <input
+                          className="medico-extra"
+                          type="text"
+                          maxLength={300}
+                          value={m.informacoesExtras ?? ''}
+                          placeholder="Informações extras"
+                          aria-label={`Informações extras de ${m.nome}`}
+                          onChange={(e) => atualizarInfoMedico(i, e.target.value)}
+                        />
                         <button onClick={() => removerMedico(i)} aria-label={`Remover ${m.nome}`}>
                           <X size={13} strokeWidth={2} />
                         </button>
@@ -395,6 +426,14 @@ export default function ClinicConfig() {
                       value={novoMedico.valorConsulta}
                       placeholder="Valor (R$)"
                       onChange={(e) => setNovoMedico((m) => ({ ...m, valorConsulta: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && adicionarMedico()}
+                    />
+                     <input
+                      type="text"
+                      maxLength={300}
+                      value={novoMedico.informacoesExtras}
+                      placeholder="Informações extras..."
+                      onChange={(e) => setNovoMedico((m) => ({ ...m, informacoesExtras: e.target.value }))}
                       onKeyDown={(e) => e.key === 'Enter' && adicionarMedico()}
                     />
                     <button className="btn btn-primary" onClick={adicionarMedico}>

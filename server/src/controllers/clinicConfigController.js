@@ -78,7 +78,7 @@ exports.buildContextoParaIA = async (ownerId) => {
 
   const aceitaParticular = config.aceitaParticular !== false;
 
-   const medicosTexto = (config.medicos || [])
+    const medicosTexto = (config.medicos || [])
     .map((m) => {
       const titulo = m.especialidade ? `${m.nome} (${m.especialidade})` : m.nome;
       const partes = [];
@@ -88,11 +88,18 @@ exports.buildContextoParaIA = async (ownerId) => {
           : 'valor não informado';
         partes.push(`consulta particular ${valor}`);
       }
+      if (m.atendeConvenio === false || !(config.convenios || []).length) {
+        partes.push('atende apenas particular');
+      } else if ((m.convenios || []).length) {
+        partes.push(`convênios aceitos: ${m.convenios.join(', ')}`);
+      } else {
+        partes.push(`convênios aceitos: ${config.convenios.join(', ')}`);
+      }
       if (m.informacoesExtras) partes.push(`informações extras: ${m.informacoesExtras}`);
       return partes.length ? `- ${titulo}: ${partes.join('; ')}` : `- ${titulo}`;
     })
     .join('\n');
-
+    
   const particularTexto = aceitaParticular
     ? 'a clínica atende particular'
     : 'a clínica NÃO atende particular, apenas convênios';
