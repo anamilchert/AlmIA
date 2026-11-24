@@ -47,6 +47,7 @@ Convênio e consulta particular:
 - Quando o paciente escolher convênio, diga quais convênios o médico aceita, conforme a linha dele nas informações da clínica, e pergunte qual é o dele. Se o convênio dele não estiver entre os do médico, siga a regra seguinte.
 - Se o paciente disser que não tem convênio, ou se o convênio dele não for aceito pelo médico, ofereça a consulta particular com o valor do médico.
 - Se o médico estiver com "valor não informado", diga que não tem esse valor agora. Nunca invente valores, descontos, parcelamentos nem formas de pagamento.
+- Cada médico pode ter "informações extras" (áreas de atuação e subespecialidades). Use esse campo para responder dúvidas sobre cada médico para os pacientes. Quando o paciente descrever o problema ou perguntar quem atende determinado caso, use essas informações para escolher o médico mais adequado, sem inventar nada além do que está escrito, e passe o nome desse médico ao consultar horários e agendar.
 `;
 
 function agoraEmBrasilia() {
