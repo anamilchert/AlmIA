@@ -4,7 +4,6 @@ const { avaliarHandoff, registrarAssunto, responderIA } = require('../services/h
 const { buscarPacientePorTelefone } = require('./pacienteController');
 const { numeroBloqueado } = require('../utils/numerosBloqueados');
 
-const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 const HANDOFF_NA_PRIMEIRA_FALA = false;
 const SAUDACAO = 'Olá! Como posso ajudar você hoje?';
 
@@ -26,6 +25,12 @@ async function receberMensagem(req, res) {
     const mensagemRecebida = change?.value?.messages?.[0];
 
     if (!mensagemRecebida) {
+      return res.sendStatus(200);
+    }
+
+        const ownerId = process.env.WHATSAPP_OWNER_ID;
+    if (!ownerId) {
+      console.error('[WhatsApp] WHATSAPP_OWNER_ID não configurado; mensagem ignorada');
       return res.sendStatus(200);
     }
 
@@ -52,7 +57,7 @@ async function receberMensagem(req, res) {
     }
 
     let conversa = await Conversa.findOne({
-      ownerId: OWNER_ID_TESTE,
+      ownerId: ownerId,
       telefone: numeroPaciente,
       status: { $ne: 'concluida' }
     });
@@ -60,7 +65,7 @@ async function receberMensagem(req, res) {
     if (!conversa) {
       const pacienteExistente = await buscarPacientePorTelefone(numeroPaciente);
       conversa = await Conversa.create({
-        ownerId: OWNER_ID_TESTE,
+        ownerId: ownerId,
         nome: pacienteExistente ? pacienteExistente.nome : nomeContato,
         telefone: numeroPaciente,
         pacienteId: pacienteExistente ? pacienteExistente._id : null,

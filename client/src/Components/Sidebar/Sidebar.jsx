@@ -5,8 +5,10 @@ import {
   Calendar,
   Users,
   Building2,
+  LogOut,
 } from 'lucide-react';
 import { useHandoffs } from '../../context/HandoffsContext';
+import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
 const NAV_PRINCIPAL = [
@@ -20,9 +22,27 @@ const NAV_CONFIG = [
   { id: 'clinica', label: 'Clínica', icon: Building2, path: '/clinica' },
 ];
 
+const ROTULO_PAPEL = { gestor: 'Gestor', recepcao: 'Recepcionista' };
+
+function iniciais(nome = '') {
+  return nome
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0].toUpperCase())
+    .join('');
+}
+
 export default function Sidebar({ ativo = 'clinica' }) {
   const navigate = useNavigate();
   const { total } = useHandoffs();
+  const { usuario, sair } = useAuth();
+  const ehGestor = usuario?.papel === 'gestor';
+
+  function aoSair() {
+    sair();
+    navigate('/login');
+  }
 
   return (
     <aside className="sb">
@@ -46,19 +66,26 @@ export default function Sidebar({ ativo = 'clinica' }) {
           />
         ))}
 
-        <div className="sb-section">Configuração</div>
-        {NAV_CONFIG.map((item) => (
-          <SbItem key={item.id} item={item} ativo={ativo} onNavigate={navigate} />
-        ))}
+        {ehGestor && (
+          <>
+            <div className="sb-section">Configuração</div>
+            {NAV_CONFIG.map((item) => (
+              <SbItem key={item.id} item={item} ativo={ativo} onNavigate={navigate} />
+            ))}
+          </>
+        )}
       </nav>
 
       <div className="sb-footer">
         <div className="sb-user">
-          <div className="sb-avatar">MR</div>
-          <div>
-            <div className="sb-user-name">Mariana Reis</div>
-            <div className="sb-user-role">Recepcionista</div>
+          <div className="sb-avatar">{iniciais(usuario?.nome)}</div>
+          <div className="sb-user-info">
+            <div className="sb-user-name">{usuario?.nome}</div>
+            <div className="sb-user-role">{ROTULO_PAPEL[usuario?.papel] || ''}</div>
           </div>
+          <button className="sb-logout" onClick={aoSair} aria-label="Sair" title="Sair">
+            <LogOut size={16} strokeWidth={1.8} />
+          </button>
         </div>
       </div>
     </aside>

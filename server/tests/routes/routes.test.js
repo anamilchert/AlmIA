@@ -1,6 +1,7 @@
 describe('rotas', () => {
   it.each([
     'agendamentoRoutes',
+    'authRoutes',
     'clinicConfig.routes',
     'conversaRoutes',
     'dashboardRoutes',

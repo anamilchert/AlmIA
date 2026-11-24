@@ -1,10 +1,9 @@
 const ClinicConfig = require('../models/ClinicConfig');
 
-const OWNER_ID_TESTE = 'owner-teste-001';
 
 exports.getConfig = async (req, res) => {
   try {
-    const ownerId = req.userId || OWNER_ID_TESTE;
+    const ownerId = req.ownerId;
     let config = await ClinicConfig.findOne({ owner: ownerId });
 
     if (!config) {
@@ -23,7 +22,7 @@ exports.getConfig = async (req, res) => {
 
 exports.updateConfig = async (req, res) => {
   try {
-    const ownerId = req.userId || OWNER_ID_TESTE;
+    const ownerId = req.ownerId;
     const {
       dadosGerais,
       horarios,

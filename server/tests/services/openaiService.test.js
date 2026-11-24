@@ -155,7 +155,7 @@ describe('gerarResposta', () => {
     const { gerarResposta } = carregar();
     const contato = { pacienteId: 'p1', nome: 'Maria' };
 
-    const texto = await gerarResposta([msgPaciente('Quero agendar')], { contato });
+    const texto = await gerarResposta([msgPaciente('Quero agendar')], { contato, ownerId: 'owner-teste-001' });
 
     expect(texto).toBe('Tenho 10h e 11h.');
     expect(mockExecutar).toHaveBeenCalledWith(

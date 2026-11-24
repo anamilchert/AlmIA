@@ -1,10 +1,9 @@
+import { authFetch } from './auth';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-// MODO TESTE: sem token de autenticação por enquanto (auth ainda não existe
-// no backend). Quando existir, volte a enviar o header Authorization aqui.
-
 async function request(path, options = {}) {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await authFetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -30,7 +30,7 @@ describe('getConfig', () => {
     const config = { owner: 'owner-teste-001' };
     ClinicConfig.findOne.mockResolvedValue(config);
     const res = criarRes();
-    await getConfig({}, res);
+    await getConfig({ ownerId: 'owner-teste-001' }, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(config);
     expect(ClinicConfig.create).not.toHaveBeenCalled();
@@ -40,7 +40,7 @@ describe('getConfig', () => {
     ClinicConfig.findOne.mockResolvedValue(null);
     ClinicConfig.create.mockResolvedValue({ owner: 'owner-teste-001' });
     const res = criarRes();
-    await getConfig({}, res);
+    await getConfig({ ownerId: 'owner-teste-001' }, res);
     expect(ClinicConfig.create).toHaveBeenCalledWith({
       owner: 'owner-teste-001',
       dadosGerais: { nomeClinica: '' },
@@ -48,9 +48,9 @@ describe('getConfig', () => {
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
-  it('usa o userId da requisição quando existir', async () => {
+  it('usa o ownerId da requisição', async () => {
     ClinicConfig.findOne.mockResolvedValue({});
-    await getConfig({ userId: 'user-1' }, criarRes());
+    await getConfig({ ownerId: 'user-1' }, criarRes());
     expect(ClinicConfig.findOne).toHaveBeenCalledWith({ owner: 'user-1' });
   });
 
@@ -67,7 +67,7 @@ describe('updateConfig', () => {
     ClinicConfig.findOneAndUpdate.mockResolvedValue({ ok: true });
     const res = criarRes();
     await updateConfig(
-      { body: { dadosGerais: { nomeClinica: 'Clínica X' }, convenios: ['Amil'] } },
+      { ownerId: 'owner-teste-001', body: { dadosGerais: { nomeClinica: 'Clínica X' }, convenios: ['Amil'] } },
       res
     );
     const [filtro, update, opcoes] = ClinicConfig.findOneAndUpdate.mock.calls[0];
@@ -97,7 +97,7 @@ describe('updateConfig', () => {
     expect(res.status).toHaveBeenCalledWith(500);
   });
 
-    it('salva aceitaParticular quando o valor é booleano', async () => {
+  it('salva aceitaParticular quando o valor é booleano', async () => {
     ClinicConfig.findOneAndUpdate.mockResolvedValue({});
     await updateConfig({ body: { aceitaParticular: false } }, criarRes());
     expect(ClinicConfig.findOneAndUpdate.mock.calls[0][1].$set).toEqual({ aceitaParticular: false });
@@ -144,7 +144,7 @@ describe('buildContextoParaIA', () => {
     expect(texto).toContain('Mensagem fora do horário: Voltamos amanhã.');
   });
 
-    const configComMedicos = (extra = {}) => ({
+  const configComMedicos = (extra = {}) => ({
     dadosGerais: { nomeClinica: 'Clínica X', endereco: 'Rua A, 10', telefonePrincipal: '4733334444' },
     horarios: [{ dia: 'Segunda', abertura: '08:00', fechamento: '18:00', ativo: true }],
     convenios: ['Amil'],

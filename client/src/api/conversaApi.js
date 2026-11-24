@@ -1,19 +1,21 @@
+import { authFetch } from './auth';
+
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/conversas`;
 
 export async function listarConversas() {
-  const res = await fetch(API_URL);
+  const res = await authFetch(API_URL);
   if (!res.ok) throw new Error('Erro ao listar conversas');
   return res.json();
 }
 
 export async function obterConversa(id) {
-  const res = await fetch(`${API_URL}/${id}`);
+  const res = await authFetch(`${API_URL}/${id}`);
   if (!res.ok) throw new Error('Erro ao buscar conversa');
   return res.json();
 }
 
 export async function criarConversa(dados) {
-  const res = await fetch(API_URL, {
+  const res = await authFetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados)
@@ -23,7 +25,7 @@ export async function criarConversa(dados) {
 }
 
 export async function enviarMensagem(id, texto) {
-  const res = await fetch(`${API_URL}/${id}/mensagens`, {
+  const res = await authFetch(`${API_URL}/${id}/mensagens`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ texto })
@@ -33,13 +35,13 @@ export async function enviarMensagem(id, texto) {
 }
 
 export async function listarHandoffs() {
-  const res = await fetch(`${API_URL}/handoffs`);
+  const res = await authFetch(`${API_URL}/handoffs`);
   if (!res.ok) throw new Error('Erro ao listar handoffs');
   return res.json();
 }
 
 export async function removerConversa(id) {
-  const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+  const res = await authFetch(`${API_URL}/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Erro ao apagar conversa');
   return res.json();
 }

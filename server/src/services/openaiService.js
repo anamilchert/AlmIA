@@ -2,7 +2,6 @@ const OpenAI = require('openai');
 const { buildContextoParaIA } = require('../controllers/clinicConfigController');
 const { ferramentas, executarFerramenta } = require('./agendaIAService');
 
-const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 const MODELO = process.env.OPENAI_MODEL_CONVERSA || 'gpt-5.6-luna';
 const LIMITE_HISTORICO = 20;
 const TIMEOUT_MS = 30000;
@@ -59,10 +58,10 @@ function agoraEmBrasilia() {
   };
 }
 
-async function montarPrompt(nomePaciente) {
+async function montarPrompt(nomePaciente, ownerId) {
   let contexto = '';
   try {
-    contexto = await buildContextoParaIA(OWNER_ID_TESTE);
+    contexto = await buildContextoParaIA(ownerId);
   } catch (e) {
     console.error('[IA] Falha ao montar contexto da clínica:', e.message);
   }
@@ -94,14 +93,14 @@ function lerArgumentos(texto) {
   }
 }
 
-async function gerarResposta(mensagens, { contato = null } = {}) {
+async function gerarResposta(mensagens, { contato = null, ownerId } = {}) {
   const historico = mensagens.slice(-LIMITE_HISTORICO).map((m) => ({
     role: m.remetente === 'paciente' ? 'user' : 'assistant',
     content: m.texto
   }));
 
   const nomePaciente = contato && contato.pacienteId ? contato.nome : null;
-  const conversaApi = [{ role: 'system', content: await montarPrompt(nomePaciente) }, ...historico];
+  const conversaApi = [{ role: 'system', content: await montarPrompt(nomePaciente, ownerId) }, ...historico];
 
   console.log(
     `[IA] chamando modelo=${MODELO} mensagens=${historico.length} chave=${
@@ -143,7 +142,7 @@ async function gerarResposta(mensagens, { contato = null } = {}) {
       for (const chamada of chamadas) {
         const args = lerArgumentos(chamada.function.arguments);
         const resultado = await executarFerramenta(chamada.function.name, args, {
-          ownerId: OWNER_ID_TESTE,
+          ownerId: ownerId,
           contato
         });
         console.log('[IA] ferramenta', chamada.function.name, JSON.stringify(args), '->', JSON.stringify(resultado));

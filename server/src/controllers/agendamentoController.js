@@ -1,18 +1,17 @@
 const Agendamento = require('../models/Agendamento');
   const { finalizarAgendamentosVencidos } = require('../services/finalizarAgendamentos');
 
-const OWNER_ID_TESTE = 'owner-teste-001';
 const STATUS_VALIDOS = ['pendente', 'confirmado', 'cancelado', 'concluido', 'nao_compareceu'];
 
 async function listarAgendamentos(req, res) {
   try {
          try {
-        await finalizarAgendamentosVencidos(OWNER_ID_TESTE);
+        await finalizarAgendamentosVencidos(req.ownerId);
       } catch (e) {
         console.error('Falha ao finalizar agendamentos vencidos:', e.message);
       }
     const { status, inicio, fim } = req.query;
-    const filtro = { ownerId: OWNER_ID_TESTE };
+    const filtro = { ownerId: req.ownerId };
     if (status) filtro.status = status;
     if (inicio || fim) {
       filtro.data = {};
@@ -32,7 +31,7 @@ async function criarAgendamento(req, res) {
     if (!nome || !especialidade || !data) {
       return res.status(400).json({ erro: 'Nome, especialidade e data são obrigatórios.' });
     }
-    const novo = await Agendamento.create({ ...req.body, ownerId: OWNER_ID_TESTE });
+    const novo = await Agendamento.create({ ...req.body, ownerId: req.ownerId });
     res.status(201).json(novo);
   } catch (err) {
     res.status(400).json({ erro: 'Erro ao criar agendamento.', detalhes: err.message });
@@ -46,7 +45,7 @@ async function atualizarStatus(req, res) {
       return res.status(400).json({ erro: 'Status inválido.' });
     }
     const atualizado = await Agendamento.findOneAndUpdate(
-      { _id: req.params.id, ownerId: OWNER_ID_TESTE },
+      { _id: req.params.id, ownerId: req.ownerId },
       { status },
       { new: true }
     );
@@ -63,7 +62,7 @@ async function removerAgendamento(req, res) {
   try {
     const removido = await Agendamento.findOneAndDelete({
       _id: req.params.id,
-      ownerId: OWNER_ID_TESTE
+      ownerId: req.ownerId
     });
     if (!removido) {
       return res.status(404).json({ erro: 'Agendamento não encontrado.' });

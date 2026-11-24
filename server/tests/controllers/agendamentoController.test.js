@@ -5,10 +5,10 @@ jest.mock('../../src/models/Agendamento', () => ({
   findOneAndDelete: jest.fn(),
 }));
 
-  jest.mock('../../src/services/finalizarAgendamentos', () => ({
-    finalizarAgendamentosVencidos: jest.fn(),
-  }));
-  const { finalizarAgendamentosVencidos } = require('../../src/services/finalizarAgendamentos');
+jest.mock('../../src/services/finalizarAgendamentos', () => ({
+  finalizarAgendamentosVencidos: jest.fn(),
+}));
+const { finalizarAgendamentosVencidos } = require('../../src/services/finalizarAgendamentos');
 
 const Agendamento = require('../../src/models/Agendamento');
 const {
@@ -29,7 +29,7 @@ describe('listarAgendamentos', () => {
     const sort = jest.fn().mockResolvedValue([{ nome: 'Ana' }]);
     Agendamento.find.mockReturnValue({ sort });
     const res = criarRes();
-    await listarAgendamentos({ query: {} }, res);
+    await listarAgendamentos({ query: {}, ownerId: 'owner-teste-001' }, res);
     expect(Agendamento.find).toHaveBeenCalledWith({ ownerId: 'owner-teste-001' });
     expect(sort).toHaveBeenCalledWith({ data: 1 });
     expect(res.json).toHaveBeenCalledWith([{ nome: 'Ana' }]);
@@ -55,14 +55,14 @@ describe('listarAgendamentos', () => {
     expect(res.status).toHaveBeenCalledWith(500);
   });
 
-      it('lista mesmo se a finalização automática falhar', async () => {
-      finalizarAgendamentosVencidos.mockRejectedValue(new Error('falha'));
-      const sort = jest.fn().mockResolvedValue([]);
-      Agendamento.find.mockReturnValue({ sort });
-      const res = criarRes();
-      await listarAgendamentos({ query: {} }, res);
-      expect(res.json).toHaveBeenCalledWith([]);
-    });
+  it('lista mesmo se a finalização automática falhar', async () => {
+    finalizarAgendamentosVencidos.mockRejectedValue(new Error('falha'));
+    const sort = jest.fn().mockResolvedValue([]);
+    Agendamento.find.mockReturnValue({ sort });
+    const res = criarRes();
+    await listarAgendamentos({ query: {} }, res);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
 });
 
 describe('criarAgendamento', () => {
