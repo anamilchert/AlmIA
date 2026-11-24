@@ -3,7 +3,7 @@ const { gerarHash, conferirSenha, gerarToken, verificarToken } = require('../../
 const usuario = { _id: 'u1', papel: 'gestor', ownerId: 'clinica-1' };
 
 beforeEach(() => {
-  process.env.JWT_SECRET = 'segredo-de-teste-com-mais-de-16-caracteres';
+    process.env.JWT_SECRET = 'a'.repeat(32);;
 });
 
 describe('senha', () => {

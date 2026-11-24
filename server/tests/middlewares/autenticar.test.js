@@ -10,7 +10,7 @@ function criarRes() {
 }
 
 beforeEach(() => {
-  process.env.JWT_SECRET = 'segredo-de-teste-com-mais-de-16-caracteres';
+    process.env.JWT_SECRET = 'a'.repeat(32);
 });
 
 describe('autenticar', () => {
