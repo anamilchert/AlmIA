@@ -1,0 +1,21 @@
+.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--gray-50); padding: 24px; font-family: var(--font); }
+.login-card { width: 100%; max-width: 380px; background: #fff; border: 1px solid var(--gray-100); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 32px 28px; display: flex; flex-direction: column; gap: 16px; }
+.login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.login-logo-mark { width: 38px; height: 38px; border-radius: 10px; background: var(--blue-500); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; }
+.login-logo-name { font-size: 16px; font-weight: 700; color: var(--gray-800); }
+.login-logo-tag { font-size: 12px; color: var(--blue-500); }
+.login-titulo { font-size: 20px; font-weight: 700; color: var(--gray-800); margin: 4px 0 0; }
+.login-campo { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--gray-600); }
+.login-campo input { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 11px 14px; font-size: 14px; font-family: var(--font); outline: none; background: var(--gray-25); color: var(--gray-800); }
+.login-campo input:focus { border-color: var(--blue-400); background: #fff; }
+.login-erro { font-size: 13px; color: var(--red-400); background: var(--red-50); border-radius: var(--radius-sm); padding: 10px 12px; }
+.login-botao { border: none; border-radius: var(--radius-sm); padding: 12px 16px; font-size: 14px; font-weight: 600; font-family: var(--font); background: #001A6B; color: #fff; cursor: pointer; }
+.login-botao:disabled { opacity: 0.6; cursor: default; }
+.login-campo label { font-size: 13px; font-weight: 600; color: var(--gray-600); }
+.login-senha { position: relative; display: flex; }
+.login-senha input { width: 100%; padding-right: 44px; box-sizing: border-box; }
+.login-olho { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: none; color: var(--gray-400); cursor: pointer; padding: 6px; display: flex; border-radius: var(--radius-sm); }
+.login-olho:hover { color: var(--gray-600); }
+.login-link { border: none; background: none; color: var(--blue-500); font-size: 13px; font-family: var(--font); cursor: pointer; padding: 0; align-self: center; }
+.login-link:hover { text-decoration: underline; }
+.login-aviso { font-size: 13px; color: var(--gray-600); background: var(--gray-50); border-radius: var(--radius-sm); padding: 10px 12px; text-align: center; }

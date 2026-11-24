@@ -2,13 +2,13 @@ jest.mock('../../src/models/Conversa', () => ({ findOne: jest.fn(), create: jest
 jest.mock('../../src/services/openaiService', () => ({ gerarResposta: jest.fn() }));
 jest.mock('../../src/services/whatsappService', () => ({ enviarMensagemWhatsapp: jest.fn() }));
 jest.mock('../../src/controllers/pacienteController', () => ({ buscarPacientePorTelefone: jest.fn() }));
+jest.mock('../../src/services/classificadorService', () => ({ classificarMensagem: jest.fn() }));
 
 const Conversa = require('../../src/models/Conversa');
 const { gerarResposta } = require('../../src/services/openaiService');
 const { enviarMensagemWhatsapp } = require('../../src/services/whatsappService');
 const { buscarPacientePorTelefone } = require('../../src/controllers/pacienteController');
 const { verificarWebhook, receberMensagem } = require('../../src/controllers/whatsappController');
-jest.mock('../../src/services/classificadorService', () => ({ classificarMensagem: jest.fn() }));
 const { classificarMensagem } = require('../../src/services/classificadorService');
 
 const TELEFONE = '5511987654321';
@@ -32,6 +32,7 @@ function fabricarConversa(extra = {}) {
 beforeEach(() => {
   jest.resetAllMocks();
   process.env.WHATSAPP_VERIFY_TOKEN = 'token-teste';
+  process.env.WHATSAPP_OWNER_ID = 'owner-teste-001';
 });
 
 describe('verificarWebhook', () => {
@@ -57,6 +58,17 @@ describe('receberMensagem', () => {
     expect(Conversa.findOne).not.toHaveBeenCalled();
   });
 
+  it('ignora a mensagem quando WHATSAPP_OWNER_ID não está configurado', async () => {
+    delete process.env.WHATSAPP_OWNER_ID;
+    const erro = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const res = criarRes();
+    await receberMensagem(criarReq({ from: TELEFONE, text: { body: 'Oi' } }), res);
+    expect(res.sendStatus).toHaveBeenCalledWith(200);
+    expect(Conversa.findOne).not.toHaveBeenCalled();
+    expect(gerarResposta).not.toHaveBeenCalled();
+    erro.mockRestore();
+  });
+
   it('avisa que só entende texto quando a mensagem não tem texto', async () => {
     const res = criarRes();
     await receberMensagem(criarReq({ from: TELEFONE, type: 'audio' }), res);
@@ -65,13 +77,7 @@ describe('receberMensagem', () => {
     expect(res.sendStatus).toHaveBeenCalledWith(200);
   });
 
-  it('procura só conversa em aberto e responde pelo bot quando o status é ia', async () => {
-    const conversa = fabricarConversa();
-    Conversa.findOne.mockResolvedValue(conversa);
-    gerarResposta.mockResolvedValue('Resposta da IA');
-    const res = criarRes();
-
-    it('ignora mensagens de números bloqueados', async () => {
+  it('ignora mensagens de números bloqueados', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation(() => {});
     process.env.NUMEROS_BLOQUEADOS = TELEFONE;
     const res = criarRes();
@@ -83,7 +89,13 @@ describe('receberMensagem', () => {
     expect(gerarResposta).not.toHaveBeenCalled();
     delete process.env.NUMEROS_BLOQUEADOS;
     log.mockRestore();
-  });  
+  });
+
+  it('procura só conversa em aberto e responde pelo bot quando o status é ia', async () => {
+    const conversa = fabricarConversa();
+    Conversa.findOne.mockResolvedValue(conversa);
+    gerarResposta.mockResolvedValue('Resposta da IA');
+    const res = criarRes();
 
     await receberMensagem(criarReq({ from: TELEFONE, text: { body: 'Oi' } }), res);
 

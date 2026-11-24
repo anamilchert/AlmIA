@@ -92,9 +92,10 @@ describe('registrarAssunto', () => {
 describe('responderIA', () => {
   it('devolve a resposta da IA passando os dados do contato', async () => {
     gerarResposta.mockResolvedValue('Olá!');
-    const conversa = novaConversa({ pacienteId: 'p1', nome: 'Maria', telefone: '5511987654321' });
+    const conversa = novaConversa({ ownerId: 'o1', pacienteId: 'p1', nome: 'Maria', telefone: '5511987654321' });
     await expect(responderIA(conversa)).resolves.toBe('Olá!');
     expect(gerarResposta).toHaveBeenCalledWith(conversa.mensagens, {
+      ownerId: 'o1',
       contato: { pacienteId: 'p1', nome: 'Maria', telefone: '5511987654321' },
     });
   });

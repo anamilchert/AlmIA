@@ -99,7 +99,7 @@ describe('criarPaciente', () => {
   it('cria o paciente com o ownerId e responde 201', async () => {
     Paciente.create.mockResolvedValue({ _id: 'p1' });
     const res = criarRes();
-    await criarPaciente({ body: { nome: 'Maria', telefone: '5511987654321' } }, res);
+    await criarPaciente({ body: { nome: 'Maria', telefone: '5511987654321' }, ownerId: 'owner-teste-001' }, res);
     expect(Paciente.create).toHaveBeenCalledWith(
       expect.objectContaining({ nome: 'Maria', ownerId: 'owner-teste-001' })
     );
@@ -126,7 +126,7 @@ describe('buscarPacientePorTelefone', () => {
     const maria = { nome: 'Maria', telefone: '(47) 99123-4567' };
     Paciente.find.mockResolvedValue([{ nome: 'João', telefone: '11 98888-7777' }, maria]);
 
-    await expect(buscarPacientePorTelefone('5547991234567')).resolves.toBe(maria);
+    await expect(buscarPacientePorTelefone('5547991234567', 'owner-teste-001')).resolves.toBe(maria);
     expect(Paciente.find).toHaveBeenCalledWith({
       ownerId: 'owner-teste-001',
       telefone: { $ne: '' },
@@ -135,14 +135,14 @@ describe('buscarPacientePorTelefone', () => {
 
   it('devolve null quando nenhum cadastro combina', async () => {
     Paciente.find.mockResolvedValue([{ nome: 'João', telefone: '11 98888-7777' }]);
-    await expect(buscarPacientePorTelefone('5547991234567')).resolves.toBeNull();
+    await expect(buscarPacientePorTelefone('5547991234567', 'owner-teste-001')).resolves.toBeNull();
   });
 });
 
 describe('buscarPacientePorNome', () => {
   it('busca sem diferenciar maiúsculas e ignorando espaços nas pontas', async () => {
     Paciente.findOne.mockResolvedValue(null);
-    await buscarPacientePorNome('  Maria Silva ');
+    await buscarPacientePorNome('  Maria Silva ', 'owner-teste-001');
     expect(Paciente.findOne).toHaveBeenCalledWith({
       ownerId: 'owner-teste-001',
       nome: { $regex: '^Maria Silva$', $options: 'i' },
@@ -151,7 +151,7 @@ describe('buscarPacientePorNome', () => {
 
   it('escapa caracteres especiais de regex', async () => {
     Paciente.findOne.mockResolvedValue(null);
-    await buscarPacientePorNome('Maria (Silva)');
+    await buscarPacientePorNome('Maria (Silva)', 'owner-teste-001');
     expect(Paciente.findOne).toHaveBeenCalledWith({
       ownerId: 'owner-teste-001',
       nome: { $regex: '^Maria \\(Silva\\)$', $options: 'i' },
@@ -229,7 +229,7 @@ describe('removerPaciente', () => {
   it('remove o paciente e desvincula as conversas dele', async () => {
     Paciente.findOneAndDelete.mockResolvedValue({ _id: 'p1' });
     const res = criarRes();
-    await removerPaciente({ params: { id: 'p1' } }, res);
+    await removerPaciente({ params: { id: 'p1' }, ownerId: 'owner-teste-001' }, res);
     expect(Conversa.updateMany).toHaveBeenCalledWith(
       { ownerId: 'owner-teste-001', pacienteId: 'p1' },
       { $set: { pacienteId: null } }
