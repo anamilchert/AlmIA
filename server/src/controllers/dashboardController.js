@@ -1,7 +1,6 @@
 const Conversa = require('../models/Conversa');
 const Agendamento = require('../models/Agendamento');
 
-const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 const TZ = 'America/Sao_Paulo';
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -15,12 +14,12 @@ function inicioDoDia(base = new Date()) {
   return new Date(`${dia}T00:00:00-03:00`);
 }
 
-async function contarPeriodo(inicio, fim) {
+async function contarPeriodo(ownerId, inicio, fim) {
   const periodo = { $gte: inicio, $lt: fim };
   const [conversas, semHandoff, handoffs] = await Promise.all([
-    Conversa.countDocuments({ ownerId: OWNER_ID_TESTE, createdAt: periodo }),
-    Conversa.countDocuments({ ownerId: OWNER_ID_TESTE, createdAt: periodo, handoffEm: null }),
-    Conversa.countDocuments({ ownerId: OWNER_ID_TESTE, handoffEm: periodo })
+    Conversa.countDocuments({ ownerId, createdAt: periodo }),
+    Conversa.countDocuments({ ownerId, createdAt: periodo, handoffEm: null }),
+    Conversa.countDocuments({ ownerId, handoffEm: periodo })
   ]);
 
   return {
@@ -70,9 +69,9 @@ async function obterMetricas(req, res) {
     ] = await Promise.all([
       contarPeriodo(inicio, fimHoje),
       contarPeriodo(inicioOntem, inicio),
-      Conversa.find({ ownerId: OWNER_ID_TESTE, ultimaMensagemEm: { $gte: inicio } }).select('mensagens'),
+      Conversa.find({ ownerId: req.ownerId, ultimaMensagemEm: { $gte: inicio } }).select('mensagens'),
       Conversa.aggregate([
-        { $match: { ownerId: OWNER_ID_TESTE, createdAt: { $gte: inicio } } },
+        { $match: { ownerId: req.ownerId, createdAt: { $gte: inicio } } },
         {
           $group: {
             _id: {
@@ -84,13 +83,13 @@ async function obterMetricas(req, res) {
         }
       ]),
       Conversa.aggregate([
-        { $match: { ownerId: OWNER_ID_TESTE, createdAt: { $gte: inicioSemana } } },
+        { $match: { ownerId: req.ownerId, createdAt: { $gte: inicioSemana } } },
         { $group: { _id: { $ifNull: ['$assunto', 'outro'] }, total: { $sum: 1 } } },
         { $sort: { total: -1 } }
       ]),
-      Agendamento.countDocuments({ ownerId: OWNER_ID_TESTE, origem: 'ia', createdAt: { $gte: inicio } }),
-      Agendamento.find({ ownerId: OWNER_ID_TESTE, origem: 'ia' }).sort({ createdAt: -1 }).limit(5),
-      Conversa.find({ ownerId: OWNER_ID_TESTE, handoffEm: { $ne: null } })
+      Agendamento.countDocuments({ ownerId: req.ownerId, origem: 'ia', createdAt: { $gte: inicio } }),
+      Agendamento.find({ ownerId: req.ownerId, origem: 'ia' }).sort({ createdAt: -1 }).limit(5),
+      Conversa.find({ ownerId: req.ownerId, handoffEm: { $ne: null } })
         .sort({ handoffEm: -1 })
         .limit(5)
         .select('nome motivoHandoff handoffEm aguardandoHumano')

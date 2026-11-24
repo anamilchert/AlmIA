@@ -60,7 +60,8 @@ function interpretarResposta(conversa, resposta) {
 
 async function responderIA(conversa, { handoffEmFalha = true } = {}) {
   try {
-        const resposta = await gerarResposta(conversa.mensagens, {
+          const resposta = await gerarResposta(conversa.mensagens, {
+      ownerId: conversa.ownerId,
       contato: {
         pacienteId: conversa.pacienteId,
         nome: conversa.nome,

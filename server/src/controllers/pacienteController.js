@@ -3,11 +3,9 @@ const buildTimelinePaciente = require('../utils/buildTimelinePaciente');
 const XLSX = require('xlsx');
 const Conversa = require('../models/Conversa');
 
-const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
-
 async function listarPacientes(req, res) {
   try {
-    const pacientes = await Paciente.find({ ownerId: OWNER_ID_TESTE })
+    const pacientes = await Paciente.find({ ownerId: req.ownerId })
       .select('nome telefone planoSaude.operadora dataCadastro');
     res.json(pacientes);
   } catch (err) {
@@ -19,7 +17,7 @@ async function obterPaciente(req, res) {
   try {
     const paciente = await Paciente.findOne({
       _id: req.params.id,
-      ownerId: OWNER_ID_TESTE
+      ownerId: req.ownerId
     });
 
     if (!paciente) {
@@ -45,7 +43,7 @@ async function criarPaciente(req, res) {
   try {
     const novoPaciente = await Paciente.create({
       ...req.body,
-      ownerId: OWNER_ID_TESTE
+      ownerId: req.ownerId
     });
     res.status(201).json(novoPaciente);
   } catch (err) {
@@ -57,18 +55,18 @@ function chaveTelefone(telefone) {
   return String(telefone || '').replace(/\D/g, '').slice(-8);
 }
 
-async function buscarPacientePorTelefone(telefone) {
+async function buscarPacientePorTelefone(telefone, ownerId) {
   const chave = chaveTelefone(telefone);
   if (chave.length < 8) return null;
 
-  const candidatos = await Paciente.find({ ownerId: OWNER_ID_TESTE, telefone: { $ne: '' } });
+  const candidatos = await Paciente.find({ ownerId, telefone: { $ne: '' } });
   return candidatos.find((p) => chaveTelefone(p.telefone) === chave) || null;
 }
 
-async function buscarPacientePorNome(nome) {
+async function buscarPacientePorNome(nome, ownerId) {
   const nomeSeguro = nome.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return Paciente.findOne({
-    ownerId: OWNER_ID_TESTE,
+    ownerId,
     nome: { $regex: `^${nomeSeguro}$`, $options: 'i' }
   });
 }
@@ -86,7 +84,7 @@ async function importarPacientes(req, res) {
     const pacientesParaCriar = linhas
       .filter((l) => l.nome && l.nome.trim())
       .map((l) => ({
-        ownerId: OWNER_ID_TESTE,
+        ownerId: req.ownerId,
         nome: String(l.nome).trim(),
         telefone: l.telefone ? String(l.telefone).trim() : '',
         dataNascimento: l.dataNascimento ? new Date(l.dataNascimento) : undefined,
@@ -110,13 +108,13 @@ async function removerPaciente(req, res) {
   try {
     const removido = await Paciente.findOneAndDelete({
       _id: req.params.id,
-      ownerId: OWNER_ID_TESTE
+      ownerId: req.ownerId
     });
     if (!removido) {
       return res.status(404).json({ erro: 'Paciente não encontrado.' });
     }
     await Conversa.updateMany(
-      { ownerId: OWNER_ID_TESTE, pacienteId: removido._id },
+      { ownerId: req.ownerId, pacienteId: removido._id },
       { $set: { pacienteId: null } }
     );
     res.json({ ok: true });

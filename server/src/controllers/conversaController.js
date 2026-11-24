@@ -5,7 +5,6 @@ const { avaliarHandoff, registrarAssunto, responderIA } = require('../services/h
 const detectaIntencaoAgendamento = require('../utils/detectaIntencaoAgendamento');
 const { buscarPacientePorTelefone, buscarPacientePorNome } = require('./pacienteController');
 
-const OWNER_ID_TESTE = 'owner-teste-001'; // TODO: substituir por req.userId
 const STATUS_VALIDOS = ['ia', 'humano', 'concluida'];
 const HANDOFF_NA_PRIMEIRA_FALA = false;
 
@@ -45,7 +44,7 @@ async function salvarEResponder(conversa, res) {
 
 async function listarConversas(req, res) {
   try {
-    const conversas = await Conversa.find({ ownerId: OWNER_ID_TESTE })
+    const conversas = await Conversa.find({ ownerId: req.ownerId })
       .select('nome telefone status ultimaMensagemEm mensagens')
       .sort({ ultimaMensagemEm: -1 });
 
@@ -66,7 +65,7 @@ async function listarConversas(req, res) {
 
 async function listarHandoffs(req, res) {
   try {
-    const conversas = await Conversa.find({ ownerId: OWNER_ID_TESTE, aguardandoHumano: true })
+    const conversas = await Conversa.find({ ownerId: req.ownerId, aguardandoHumano: true })
       .select('nome telefone motivoHandoff urgenciaHandoff handoffEm');
 
     const peso = { alta: 0, media: 1, baixa: 2 };
@@ -89,7 +88,7 @@ async function listarHandoffs(req, res) {
 
 async function obterConversa(req, res) {
   try {
-    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
+    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: req.ownerId });
     if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
     res.json(conversa);
   } catch (err) {
@@ -105,10 +104,10 @@ async function criarConversa(req, res) {
       return res.status(400).json({ erro: 'Nome é obrigatório para iniciar uma conversa.' });
     }
 
-    const pacienteExistente = await buscarPacientePorTelefone(telefone);
+    const pacienteExistente = await buscarPacientePorTelefone(telefone, req.ownerId);
 
     const novaConversa = await Conversa.create({
-      ownerId: OWNER_ID_TESTE,
+      ownerId: req.ownerId,
       nome: pacienteExistente ? pacienteExistente.nome : nome.trim(),
       telefone: telefone || '',
       pacienteId: pacienteExistente ? pacienteExistente._id : null,
@@ -128,7 +127,7 @@ async function enviarMensagem(req, res) {
       return res.status(400).json({ erro: 'Mensagem vazia.' });
     }
 
-    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
+    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: req.ownerId });
     if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
 
     const textoLimpo = texto.trim();
@@ -136,7 +135,7 @@ async function enviarMensagem(req, res) {
     const avaliarHandoffAgora = HANDOFF_NA_PRIMEIRA_FALA || !primeiraFala;
 
     if (primeiraFala && !conversa.pacienteId && conversa.telefone) {
-      const conhecido = await buscarPacientePorTelefone(conversa.telefone);
+      const conhecido = await buscarPacientePorTelefone(conversa.telefone, req.ownerId);
       if (conhecido) {
         conversa.pacienteId = conhecido._id;
         conversa.nome = conhecido.nome;
@@ -159,7 +158,7 @@ async function enviarMensagem(req, res) {
 
     if (conversa.estado === 'coletando_nome') {
       conversa.nome = textoLimpo;
-      const existente = await buscarPacientePorNome(textoLimpo);
+      const existente = await buscarPacientePorNome(textoLimpo, req.ownerId);
 
       if (existente) {
         conversa.pacienteId = existente._id;
@@ -181,10 +180,10 @@ async function enviarMensagem(req, res) {
         return await salvarEResponder(conversa, res);
       }
 
-      let paciente = await buscarPacientePorNome(conversa.nome);
+      let paciente = await buscarPacientePorNome(conversa.nome, req.ownerId);
       if (!paciente) {
         paciente = await Paciente.create({
-          ownerId: OWNER_ID_TESTE,
+          ownerId: req.ownerId,
           nome: conversa.nome,
           telefone: conversa.telefone,
           dataNascimento,
@@ -218,7 +217,7 @@ async function enviarMensagem(req, res) {
 
 async function removerConversa(req, res) {
   try {
-    const removida = await Conversa.findOneAndDelete({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
+    const removida = await Conversa.findOneAndDelete({ _id: req.params.id, ownerId: req.ownerId });
     if (!removida) return res.status(404).json({ erro: 'Conversa não encontrada.' });
     res.json({ ok: true });
   } catch (err) {
@@ -233,7 +232,7 @@ async function responderComoAtendente(req, res) {
       return res.status(400).json({ erro: 'Mensagem vazia.' });
     }
 
-    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
+    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: req.ownerId });
     if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
 
     const textoLimpo = texto.trim();
@@ -269,7 +268,7 @@ async function atualizarStatus(req, res) {
       return res.status(400).json({ erro: 'Status inválido.' });
     }
 
-    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: OWNER_ID_TESTE });
+    const conversa = await Conversa.findOne({ _id: req.params.id, ownerId: req.ownerId });
     if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
 
     conversa.status = status;
