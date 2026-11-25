@@ -1,4 +1,5 @@
 require('dotenv').config();
+if (process.env.NEW_RELIC_LICENSE_KEY) require('newrelic');
 const app = require('./src/app');
 const connectDB = require('./src/config/db');
 

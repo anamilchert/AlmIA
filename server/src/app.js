@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const autenticar = require('./middlewares/autenticar');
+const { health } = require('./controllers/healthController');
 
 const app = express();
 
@@ -21,8 +22,6 @@ app.use('/api/conversas', autenticar, require('./routes/conversaRoutes'));
 app.use('/api/agendamentos', autenticar, require('./routes/agendamentoRoutes'));
 app.use('/api/dashboard', autenticar, require('./routes/dashboardRoutes'));
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+app.get('/api/health', health);
 
 module.exports = app;
